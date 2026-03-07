@@ -31,31 +31,13 @@ function latLngToVector3(lat: number, lng: number, radius = 2.01): THREE.Vector3
   );
 }
 
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#ff0040',
-  high: '#ff8800',
-  medium: '#00ccff',
-  low: '#00ff41',
-};
-
-const TYPE_COLORS: Record<string, string> = {
-  earthquake: '#ff6600',
-  cyber: '#ff0040',
-  military: '#ff0040',
-  protest: '#ffaa00',
-  aircraft: '#00aaff',
-  satellite: '#aaaaff',
-  ship: '#00ff88',
-};
-
-function EventMarkers({ events, color }: { events: { lat: number; lng: number; severity?: string }[]; color?: string }) {
+function EventMarkers({ events, color }: { events: { lat: number; lng: number }[]; color?: string }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const pulseRef = useRef(0);
-
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   useFrame((_, delta) => {
-    if (!meshRef.current) return;
+    if (!meshRef.current || events.length === 0) return;
     pulseRef.current += delta;
     const scale = 1 + Math.sin(pulseRef.current * 3) * 0.3;
 
@@ -81,36 +63,26 @@ function EventMarkers({ events, color }: { events: { lat: number; lng: number; s
 }
 
 function CyberAttackLines({ threats }: { threats: CyberThreat[] }) {
-  const linesRef = useRef<THREE.Group>(null);
-  const progressRef = useRef(0);
-
-  useFrame((_, delta) => {
-    progressRef.current = (progressRef.current + delta * 0.3) % 1;
-  });
-
-  const lineGeometries = useMemo(() => {
+  const lineObjects = useMemo(() => {
     return threats.map(threat => {
       const start = latLngToVector3(threat.sourceLat, threat.sourceLng, 2.02);
       const end = latLngToVector3(threat.targetLat, threat.targetLng, 2.02);
       const mid = start.clone().add(end).multiplyScalar(0.5);
-      mid.normalize().multiplyScalar(2.5); // Arc above surface
+      mid.normalize().multiplyScalar(2.5);
 
       const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
       const points = curve.getPoints(40);
-      return new THREE.BufferGeometry().setFromPoints(points);
+      const geom = new THREE.BufferGeometry().setFromPoints(points);
+      const color = threat.severity === 'critical' ? '#ff0040' : '#ff8800';
+      const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.6 });
+      return new THREE.Line(geom, mat);
     });
   }, [threats]);
 
   return (
-    <group ref={linesRef}>
-      {lineGeometries.map((geom, i) => (
-        <line key={i} geometry={geom}>
-          <lineBasicMaterial
-            color={SEVERITY_COLORS[threats[i].severity] || '#ff0040'}
-            transparent
-            opacity={0.6}
-          />
-        </line>
+    <group>
+      {lineObjects.map((obj, i) => (
+        <primitive key={i} object={obj} />
       ))}
     </group>
   );
@@ -121,7 +93,7 @@ function AircraftMarkers({ aircraft }: { aircraft: AircraftState[] }) {
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   useFrame(() => {
-    if (!meshRef.current) return;
+    if (!meshRef.current || aircraft.length === 0) return;
     aircraft.forEach((ac, i) => {
       if (!ac.latitude || !ac.longitude) return;
       const alt = 2.01 + (ac.altitude || 10000) / 1000000;
@@ -136,9 +108,6 @@ function AircraftMarkers({ aircraft }: { aircraft: AircraftState[] }) {
 
   if (aircraft.length === 0) return null;
 
-  const isMilitary = (ac: AircraftState) =>
-    ac.callsign?.startsWith('MIL') || ac.callsign?.startsWith('RCH') || ac.callsign?.startsWith('DUKE');
-
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, aircraft.length]}>
       <boxGeometry args={[1, 0.3, 1.5]} />
@@ -152,7 +121,7 @@ function SatelliteMarkers({ satellites }: { satellites: SatelliteData[] }) {
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   useFrame(() => {
-    if (!meshRef.current) return;
+    if (!meshRef.current || satellites.length === 0) return;
     satellites.forEach((sat, i) => {
       const alt = 2.01 + sat.altitude / 20000;
       const pos = latLngToVector3(sat.lat, sat.lng, Math.min(alt, 4));
@@ -179,7 +148,7 @@ function ShipMarkers({ ships }: { ships: ShipData[] }) {
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   useFrame(() => {
-    if (!meshRef.current) return;
+    if (!meshRef.current || ships.length === 0) return;
     ships.forEach((ship, i) => {
       const pos = latLngToVector3(ship.lat, ship.lng, 2.005);
       dummy.position.copy(pos);
@@ -202,35 +171,23 @@ function ShipMarkers({ ships }: { ships: ShipData[] }) {
 
 export default function GlobeMarkers(props: Props) {
   const earthquakePositions = useMemo(() =>
-    props.earthquakes.map(e => ({ lat: e.lat, lng: e.lng, severity: e.severity })),
+    props.earthquakes.map(e => ({ lat: e.lat, lng: e.lng })),
     [props.earthquakes]
   );
 
   const militaryPositions = useMemo(() =>
-    props.militaryEvents.map(e => ({ lat: e.lat, lng: e.lng, severity: e.severity })),
+    props.militaryEvents.map(e => ({ lat: e.lat, lng: e.lng })),
     [props.militaryEvents]
   );
 
   return (
     <group>
-      {props.layers.earthquakes && (
-        <EventMarkers events={earthquakePositions} color="#ff6600" />
-      )}
-      {props.layers.military && (
-        <EventMarkers events={militaryPositions} color="#ff0040" />
-      )}
-      {props.layers.cyberAttacks && (
-        <CyberAttackLines threats={props.cyberThreats} />
-      )}
-      {props.layers.aircraft && (
-        <AircraftMarkers aircraft={props.aircraft} />
-      )}
-      {props.layers.satellites && (
-        <SatelliteMarkers satellites={props.satellites} />
-      )}
-      {props.layers.ships && (
-        <ShipMarkers ships={props.ships} />
-      )}
+      {props.layers.earthquakes && <EventMarkers events={earthquakePositions} color="#ff6600" />}
+      {props.layers.military && <EventMarkers events={militaryPositions} color="#ff0040" />}
+      {props.layers.cyberAttacks && <CyberAttackLines threats={props.cyberThreats} />}
+      {props.layers.aircraft && <AircraftMarkers aircraft={props.aircraft} />}
+      {props.layers.satellites && <SatelliteMarkers satellites={props.satellites} />}
+      {props.layers.ships && <ShipMarkers ships={props.ships} />}
     </group>
   );
 }

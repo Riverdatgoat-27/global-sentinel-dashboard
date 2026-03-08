@@ -275,6 +275,7 @@ export default function EarthMesh() {
       toSphere(25, 121), toSphere(24, 122), toSphere(23, 121), toSphere(22, 120.5),
       toSphere(23, 120), toSphere(24.5, 121), toSphere(25, 121),
     ]);
+    return c;
   }, []);
 
   const borderLines = useMemo(() => {

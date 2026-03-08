@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Layers, Radar, Plane, Ship, Satellite, Shield, Mountain, Swords } from 'lucide-react';
+import { Layers, Radar, Plane, Ship, Satellite, Shield, Mountain, Swords, Rocket, Building } from 'lucide-react';
 import type { LayerVisibility } from '@/types/intelligence';
 
 interface Props {
@@ -15,11 +15,13 @@ const layerConfig: { key: keyof LayerVisibility; label: string; icon: typeof Rad
   { key: 'aircraft', label: 'AIRCRAFT', icon: Plane, color: 'text-neon-cyan' },
   { key: 'satellites', label: 'SATELLITES', icon: Satellite, color: 'text-neon-blue' },
   { key: 'ships', label: 'MARITIME', icon: Ship, color: 'text-neon-green' },
+  { key: 'missiles', label: 'MISSILES', icon: Rocket, color: 'text-neon-red' },
+  { key: 'infrastructure', label: 'INFRA', icon: Building, color: 'text-neon-amber' },
 ];
 
 export default function LayerControls({ layers, onToggle, counts }: Props) {
   return (
-    <div className="absolute top-12 left-2 z-10 panel glow-border w-36">
+    <div className="absolute top-2 left-2 z-10 panel glow-border w-36">
       <div className="panel-header text-[9px]">
         <Layers className="w-3 h-3 text-neon-green" />
         Layers

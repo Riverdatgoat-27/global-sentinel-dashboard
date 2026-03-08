@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Radio, Volume2, VolumeX, Search, Scan, AlertCircle } from 'lucide-react';
 import { radioStations, type RadioStation } from '@/data/mockData';

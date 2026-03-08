@@ -9,11 +9,13 @@ import LayerControls from '@/components/dashboard/LayerControls';
 import AlertPanel from '@/components/dashboard/AlertPanel';
 import CCTVPanel from '@/components/dashboard/CCTVPanel';
 import VideoIntelPanel from '@/components/dashboard/VideoIntelPanel';
+import RadioPanel from '@/components/dashboard/RadioPanel';
 import TimelineSlider from '@/components/dashboard/TimelineSlider';
 import IntelGlobe from '@/components/globe/IntelGlobe';
 import { useEarthquakeData } from '@/hooks/useEarthquakeData';
 import { useAircraftData } from '@/hooks/useAircraftData';
 import { useSimulatedData } from '@/hooks/useSimulatedData';
+import { useGDELTData } from '@/hooks/useGDELTData';
 import { infrastructurePoints } from '@/data/mockData';
 import type { LayerVisibility } from '@/types/intelligence';
 
@@ -21,6 +23,7 @@ const Index = () => {
   const { earthquakes } = useEarthquakeData();
   const { aircraft } = useAircraftData();
   const { satellites, ships, cyberThreats, militaryEvents, missiles, alerts, acknowledgeAlert } = useSimulatedData();
+  const { events: gdeltEvents } = useGDELTData();
 
   const [layers, setLayers] = useState<LayerVisibility>({
     earthquakes: true,
@@ -33,7 +36,7 @@ const Index = () => {
     missiles: true,
   });
 
-  const [bottomTab, setBottomTab] = useState<'financial' | 'cctv' | 'video'>('financial');
+  const [bottomTab, setBottomTab] = useState<'financial' | 'cctv' | 'video' | 'radio'>('financial');
 
   const toggleLayer = useCallback((layer: keyof LayerVisibility) => {
     setLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
@@ -42,7 +45,7 @@ const Index = () => {
   const counts = {
     earthquakes: earthquakes.length,
     cyberAttacks: cyberThreats.length,
-    military: militaryEvents.length,
+    military: militaryEvents.length + gdeltEvents.filter(e => e.type === 'military').length,
     aircraft: aircraft.length,
     satellites: satellites.length,
     ships: ships.length,
@@ -50,12 +53,11 @@ const Index = () => {
     infrastructure: infrastructurePoints.length,
   };
 
-  const allGlobeEvents = [...earthquakes, ...militaryEvents];
+  // Combine real GDELT events with simulated military events + earthquakes
+  const allGlobeEvents = [...earthquakes, ...militaryEvents, ...gdeltEvents];
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-background">
-      <div className="scanline-overlay" />
-
       <ThreatStatusBar />
 
       <div className="flex-1 flex overflow-hidden">
@@ -76,7 +78,7 @@ const Index = () => {
             <IntelGlobe
               earthquakes={earthquakes}
               cyberThreats={cyberThreats}
-              militaryEvents={militaryEvents}
+              militaryEvents={[...militaryEvents, ...gdeltEvents.filter(e => e.type === 'military')]}
               aircraft={aircraft}
               satellites={satellites}
               ships={ships}
@@ -88,19 +90,23 @@ const Index = () => {
             <div className="absolute bottom-2 left-2 right-2 flex gap-2 z-10">
               <div className="panel px-2 py-1 text-[9px] flex items-center gap-2">
                 <span className="text-muted-foreground">FEEDS:</span>
-                <span className="text-neon-green">{Object.values(counts).reduce((a, b) => a + b, 0)} CONTACTS</span>
+                <span className="text-neon-green font-mono">{Object.values(counts).reduce((a, b) => a + b, 0)}</span>
               </div>
               <div className="panel px-2 py-1 text-[9px] flex items-center gap-2">
                 <span className="text-muted-foreground">USGS:</span>
-                <span className="text-neon-amber">{earthquakes.length} SEISMIC</span>
+                <span className="text-neon-amber font-mono">{earthquakes.length}</span>
               </div>
               <div className="panel px-2 py-1 text-[9px] flex items-center gap-2">
-                <span className="text-muted-foreground">OPENSKY:</span>
-                <span className="text-neon-cyan">{aircraft.length} AIRCRAFT</span>
+                <span className="text-muted-foreground">AIRCRAFT:</span>
+                <span className="text-neon-cyan font-mono">{aircraft.length}</span>
+              </div>
+              <div className="panel px-2 py-1 text-[9px] flex items-center gap-2">
+                <span className="text-muted-foreground">GDELT:</span>
+                <span className="text-primary font-mono">{gdeltEvents.length}</span>
               </div>
               <div className="panel px-2 py-1 text-[9px] flex items-center gap-2">
                 <span className="text-muted-foreground">THREATS:</span>
-                <span className="text-neon-red">{cyberThreats.length + missiles.length} ACTIVE</span>
+                <span className="text-neon-red font-mono">{cyberThreats.length + missiles.length}</span>
               </div>
             </div>
           </div>
@@ -109,31 +115,30 @@ const Index = () => {
           <TimelineSlider />
 
           {/* Bottom panels with tabs */}
-          <div className="h-44 shrink-0 flex flex-col border-t border-border">
+          <div className="h-48 shrink-0 flex flex-col border-t border-border">
             <div className="flex border-b border-border">
-              {(['financial', 'cctv', 'video'] as const).map(tab => (
+              {(['financial', 'cctv', 'video', 'radio'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setBottomTab(tab)}
-                  className={`px-3 py-1 text-[9px] font-display tracking-wider uppercase transition-colors ${
+                  className={`px-3 py-1 text-[9px] font-mono tracking-wider uppercase transition-colors ${
                     bottomTab === tab
-                      ? 'text-neon-green border-b border-neon-green bg-muted/30'
+                      ? 'text-primary border-b border-primary bg-primary/5'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  {tab === 'financial' ? 'MARKETS' : tab === 'cctv' ? 'CCTV' : 'VIDEO INTEL'}
+                  {tab === 'financial' ? 'MARKETS' : tab === 'cctv' ? 'CCTV' : tab === 'video' ? 'INTEL' : 'RADIO'}
                 </button>
               ))}
               <div className="flex-1" />
-              <div className="border-l border-border" style={{ width: '50%' }}>
-                {/* AI panel takes right half */}
-              </div>
+              <div className="border-l border-border" style={{ width: '50%' }} />
             </div>
             <div className="flex-1 flex overflow-hidden">
               <div className="flex-1">
                 {bottomTab === 'financial' && <FinancialPanel />}
                 {bottomTab === 'cctv' && <CCTVPanel />}
-                {bottomTab === 'video' && <VideoIntelPanel />}
+                {bottomTab === 'video' && <VideoIntelPanel gdeltEvents={gdeltEvents} />}
+                {bottomTab === 'radio' && <RadioPanel />}
               </div>
               <div className="flex-1 border-l border-border">
                 <AIAnalysisPanel events={allGlobeEvents} cyberThreats={cyberThreats} />

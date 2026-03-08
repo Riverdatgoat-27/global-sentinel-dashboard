@@ -83,11 +83,11 @@ export const cctvCameras: CCTVCamera[] = [
 ];
 
 export const videoIntel: VideoIntel[] = [
-  { id: 'vid-1', title: 'Military Convoy Movement - Eastern Europe', thumbnailUrl: '', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', embedUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=0', source: 'OSINT Aggregator', category: 'military', timestamp: new Date().toISOString(), location: 'Eastern Europe' },
+  { id: 'vid-1', title: 'Military Convoy Movement - Eastern Europe', thumbnailUrl: '', videoUrl: '', embedUrl: '', source: 'OSINT Aggregator', category: 'military', timestamp: new Date().toISOString(), location: 'Eastern Europe' },
   { id: 'vid-2', title: 'Mass Protest Downtown - Tehran', thumbnailUrl: '', videoUrl: '', embedUrl: '', source: 'Social Media / X', category: 'protest', timestamp: new Date().toISOString(), location: 'Tehran, Iran' },
-  { id: 'vid-3', title: 'Naval Exercise - Pacific Fleet', thumbnailUrl: '', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', embedUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=0', source: 'Naval News', category: 'military', timestamp: new Date().toISOString(), location: 'Western Pacific' },
+  { id: 'vid-3', title: 'Naval Exercise - Pacific Fleet', thumbnailUrl: '', videoUrl: '', embedUrl: '', source: 'Naval News', category: 'military', timestamp: new Date().toISOString(), location: 'Western Pacific' },
   { id: 'vid-4', title: 'Earthquake Aftermath - Indonesia', thumbnailUrl: '', videoUrl: '', embedUrl: '', source: 'Reuters', category: 'disaster', timestamp: new Date().toISOString(), location: 'Indonesia' },
-  { id: 'vid-5', title: 'Cyber Attack Response Briefing', thumbnailUrl: '', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', embedUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=0', source: 'CISA', category: 'cyber', timestamp: new Date().toISOString(), location: 'Washington DC' },
+  { id: 'vid-5', title: 'Cyber Attack Response Briefing', thumbnailUrl: '', videoUrl: '', embedUrl: '', source: 'CISA', category: 'cyber', timestamp: new Date().toISOString(), location: 'Washington DC' },
   { id: 'vid-6', title: 'Airstrike Footage - Conflict Zone', thumbnailUrl: '', videoUrl: '', embedUrl: '', source: 'Liveuamap / Telegram', category: 'military', timestamp: new Date().toISOString(), location: 'Middle East' },
 ];
 
@@ -95,6 +95,105 @@ export const missileEvents: MissileEvent[] = [
   { id: 'msl-1', title: 'Ballistic Missile Test Launch', launchLat: 39.0, launchLng: 125.8, targetLat: 40.5, targetLng: 132.0, severity: 'critical', timestamp: new Date().toISOString(), source: 'NORAD', type: 'ballistic', status: 'test' },
   { id: 'msl-2', title: 'Cruise Missile Strike', launchLat: 48.3, launchLng: 37.8, targetLat: 50.4, targetLng: 30.5, severity: 'critical', timestamp: new Date().toISOString(), source: 'Liveuamap', type: 'cruise', status: 'launched' },
   { id: 'msl-3', title: 'Intercepted Missile - Iron Dome', launchLat: 31.5, launchLng: 34.3, targetLat: 32.1, targetLng: 34.8, severity: 'high', timestamp: new Date().toISOString(), source: 'IDF', type: 'ballistic', status: 'intercepted' },
+];
+
+// Radio stations organized by region
+export interface RadioStation {
+  id: string;
+  name: string;
+  country: string;
+  region: string;
+  streamUrl: string;
+  language: string;
+  type: 'news' | 'music' | 'government' | 'emergency';
+  lat: number;
+  lng: number;
+}
+
+export const radioStations: RadioStation[] = [
+  // North America
+  { id: 'radio-1', name: 'NPR News', country: 'USA', region: 'North America', streamUrl: 'https://npr-ice.streamguys1.com/live.mp3', language: 'English', type: 'news', lat: 38.9, lng: -77.0 },
+  { id: 'radio-2', name: 'BBC World Service', country: 'UK', region: 'Europe', streamUrl: 'https://stream.live.vc.bbcmedia.co.uk/bbc_world_service', language: 'English', type: 'news', lat: 51.5, lng: -0.1 },
+  { id: 'radio-3', name: 'France Info', country: 'France', region: 'Europe', streamUrl: 'https://icecast.radiofrance.fr/franceinfo-midfi.mp3', language: 'French', type: 'news', lat: 48.9, lng: 2.3 },
+  { id: 'radio-4', name: 'Deutsche Welle', country: 'Germany', region: 'Europe', streamUrl: 'https://dw-radio.streamguys.com/dw-de.mp3', language: 'German', type: 'news', lat: 50.7, lng: 7.0 },
+  { id: 'radio-5', name: 'NHK World Radio', country: 'Japan', region: 'Asia', streamUrl: 'https://nhkworld.webcdn.stream.ne.jp/www11/nhkworld/def/live/radio/nhk_world_radio.m3u8', language: 'English', type: 'news', lat: 35.7, lng: 139.7 },
+  { id: 'radio-6', name: 'ABC News Radio', country: 'Australia', region: 'Oceania', streamUrl: 'https://live-radio01.mediahubaustralia.com/2TJW/mp3/', language: 'English', type: 'news', lat: -33.9, lng: 151.2 },
+  { id: 'radio-7', name: 'Al Jazeera Radio', country: 'Qatar', region: 'Middle East', streamUrl: 'https://live-hls-web-aje.getaj.net/AJE/01.m3u8', language: 'Arabic', type: 'news', lat: 25.3, lng: 51.5 },
+  { id: 'radio-8', name: 'Voice of America', country: 'USA', region: 'North America', streamUrl: 'https://voa-ingest.akamaized.net/hls/live/2035190/tvmc06/index.m3u8', language: 'English', type: 'government', lat: 38.9, lng: -77.0 },
+  { id: 'radio-9', name: 'Radio Canada Intl', country: 'Canada', region: 'North America', streamUrl: 'https://radiocanadainternational.radio.fr/s/rcinet', language: 'English', type: 'news', lat: 45.5, lng: -73.6 },
+  { id: 'radio-10', name: 'SABC News', country: 'South Africa', region: 'Africa', streamUrl: 'https://sabcmedia.co.za/sabcfm/sabc-news.mp3', language: 'English', type: 'news', lat: -26.2, lng: 28.0 },
+  { id: 'radio-11', name: 'All India Radio', country: 'India', region: 'Asia', streamUrl: 'https://air.pc.cdn.bitgravity.com/air/live/pbaudio001/playlist.m3u8', language: 'Hindi', type: 'government', lat: 28.6, lng: 77.2 },
+  { id: 'radio-12', name: 'Radio Havana Cuba', country: 'Cuba', region: 'Caribbean', streamUrl: 'https://media.rvgl.cu/RHC/rhc.mp3', language: 'Spanish', type: 'government', lat: 23.1, lng: -82.4 },
+];
+
+// Country label data for the 3D globe
+export interface CountryLabel {
+  name: string;
+  lat: number;
+  lng: number;
+  size: 'large' | 'medium' | 'small';
+}
+
+export const countryLabels: CountryLabel[] = [
+  // Major powers
+  { name: 'UNITED STATES', lat: 39.8, lng: -98.6, size: 'large' },
+  { name: 'RUSSIA', lat: 61.5, lng: 95.0, size: 'large' },
+  { name: 'CHINA', lat: 35.9, lng: 104.2, size: 'large' },
+  { name: 'BRAZIL', lat: -14.2, lng: -51.9, size: 'large' },
+  { name: 'CANADA', lat: 56.1, lng: -106.3, size: 'large' },
+  { name: 'AUSTRALIA', lat: -25.3, lng: 133.8, size: 'large' },
+  { name: 'INDIA', lat: 20.6, lng: 79.0, size: 'large' },
+
+  // Europe
+  { name: 'UK', lat: 55.4, lng: -3.4, size: 'medium' },
+  { name: 'FRANCE', lat: 46.2, lng: 2.2, size: 'medium' },
+  { name: 'GERMANY', lat: 51.2, lng: 10.5, size: 'medium' },
+  { name: 'ITALY', lat: 41.9, lng: 12.6, size: 'medium' },
+  { name: 'SPAIN', lat: 40.5, lng: -3.7, size: 'medium' },
+  { name: 'UKRAINE', lat: 48.4, lng: 31.2, size: 'medium' },
+  { name: 'POLAND', lat: 51.9, lng: 19.1, size: 'small' },
+  { name: 'NORWAY', lat: 60.5, lng: 8.5, size: 'small' },
+  { name: 'SWEDEN', lat: 60.1, lng: 18.6, size: 'small' },
+  { name: 'FINLAND', lat: 61.9, lng: 25.7, size: 'small' },
+  { name: 'TURKEY', lat: 39.0, lng: 35.2, size: 'medium' },
+
+  // Middle East
+  { name: 'IRAN', lat: 32.4, lng: 53.7, size: 'medium' },
+  { name: 'IRAQ', lat: 33.2, lng: 43.7, size: 'small' },
+  { name: 'SAUDI ARABIA', lat: 23.9, lng: 45.1, size: 'medium' },
+  { name: 'ISRAEL', lat: 31.0, lng: 34.9, size: 'small' },
+  { name: 'SYRIA', lat: 35.0, lng: 38.0, size: 'small' },
+  { name: 'UAE', lat: 23.4, lng: 53.8, size: 'small' },
+
+  // Asia
+  { name: 'JAPAN', lat: 36.2, lng: 138.3, size: 'medium' },
+  { name: 'S. KOREA', lat: 35.9, lng: 127.8, size: 'small' },
+  { name: 'N. KOREA', lat: 40.3, lng: 127.5, size: 'small' },
+  { name: 'TAIWAN', lat: 23.7, lng: 121.0, size: 'small' },
+  { name: 'PAKISTAN', lat: 30.4, lng: 69.3, size: 'medium' },
+  { name: 'INDONESIA', lat: -0.8, lng: 113.9, size: 'medium' },
+
+  // Africa
+  { name: 'EGYPT', lat: 26.8, lng: 30.8, size: 'medium' },
+  { name: 'NIGERIA', lat: 9.1, lng: 8.7, size: 'medium' },
+  { name: 'S. AFRICA', lat: -30.6, lng: 22.9, size: 'medium' },
+  { name: 'ETHIOPIA', lat: 9.1, lng: 40.5, size: 'small' },
+  { name: 'KENYA', lat: -0.0, lng: 37.9, size: 'small' },
+  { name: 'LIBYA', lat: 26.3, lng: 17.2, size: 'small' },
+  { name: 'SUDAN', lat: 12.9, lng: 30.2, size: 'small' },
+
+  // South America
+  { name: 'ARGENTINA', lat: -38.4, lng: -63.6, size: 'medium' },
+  { name: 'COLOMBIA', lat: 4.6, lng: -74.3, size: 'small' },
+  { name: 'VENEZUELA', lat: 6.4, lng: -66.6, size: 'small' },
+  { name: 'CHILE', lat: -35.7, lng: -71.5, size: 'small' },
+  { name: 'MEXICO', lat: 23.6, lng: -102.6, size: 'medium' },
+
+  // Oceans
+  { name: 'ATLANTIC OCEAN', lat: 14.6, lng: -28.7, size: 'large' },
+  { name: 'PACIFIC OCEAN', lat: 0.0, lng: -160.0, size: 'large' },
+  { name: 'INDIAN OCEAN', lat: -20.0, lng: 80.0, size: 'large' },
+  { name: 'ARCTIC OCEAN', lat: 82.0, lng: 0.0, size: 'medium' },
 ];
 
 export const threatEvents: ThreatEvent[] = [

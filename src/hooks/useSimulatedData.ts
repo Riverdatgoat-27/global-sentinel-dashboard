@@ -178,7 +178,7 @@ export function useSimulatedData() {
   useEffect(() => {
     const updateSatellites = () => setSatellites(generateSatellites());
     updateSatellites();
-    const interval = setInterval(updateSatellites, 5000);
+    const interval = setInterval(updateSatellites, 2000);
     return () => clearInterval(interval);
   }, []);
 

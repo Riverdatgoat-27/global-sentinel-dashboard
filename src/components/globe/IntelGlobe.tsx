@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useRef } from 'react';
+import { Suspense, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
 import * as THREE from 'three';
@@ -20,6 +20,63 @@ interface Props {
   layers: LayerVisibility;
   onSelectEvent?: (event: GlobeEvent | null) => void;
   onSelectAsset?: (asset: SelectedAsset) => void;
+}
+
+export interface GlobeControlHandle {
+  navigateTo: (lat: number, lng: number, zoom?: number) => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+}
+
+// Converts lat/lng to 3D position on sphere
+function latLngToCamera(lat: number, lng: number, distance: number): [number, number, number] {
+  const phi = (90 - lat) * (Math.PI / 180);
+  const theta = (lng + 180) * (Math.PI / 180);
+  return [
+    -distance * Math.sin(phi) * Math.cos(theta),
+    distance * Math.cos(phi),
+    distance * Math.sin(phi) * Math.sin(theta),
+  ];
+}
+
+// Internal component to access Three.js context
+function GlobeController({ controlRef }: { controlRef: React.MutableRefObject<any> }) {
+  const { camera } = useThree();
+
+  useImperativeHandle(controlRef, () => ({
+    navigateTo: (lat: number, lng: number, zoom?: number) => {
+      const dist = zoom ? Math.max(3, Math.min(12, 12 - zoom)) : camera.position.length();
+      const [x, y, z] = latLngToCamera(lat, lng, dist);
+      // Smooth animate
+      const start = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
+      const duration = 1500;
+      const startTime = Date.now();
+      const animate = () => {
+        const t = Math.min(1, (Date.now() - startTime) / duration);
+        const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // easeInOut
+        camera.position.set(
+          start.x + (x - start.x) * ease,
+          start.y + (y - start.y) * ease,
+          start.z + (z - start.z) * ease,
+        );
+        camera.lookAt(0, 0, 0);
+        if (t < 1) requestAnimationFrame(animate);
+      };
+      animate();
+    },
+    zoomIn: () => {
+      const dir = camera.position.clone().normalize();
+      const newDist = Math.max(3, camera.position.length() - 1.5);
+      camera.position.copy(dir.multiplyScalar(newDist));
+    },
+    zoomOut: () => {
+      const dir = camera.position.clone().normalize();
+      const newDist = Math.min(12, camera.position.length() + 1.5);
+      camera.position.copy(dir.multiplyScalar(newDist));
+    },
+  }));
+
+  return null;
 }
 
 function ClickHandler({ aircraft, ships, satellites, cyberThreats, onSelectAsset }: {
@@ -86,7 +143,15 @@ function ClickHandler({ aircraft, ships, satellites, cyberThreats, onSelectAsset
   return null;
 }
 
-export default function IntelGlobe(props: Props) {
+const IntelGlobe = forwardRef<GlobeControlHandle, Props>((props, ref) => {
+  const controlRef = useRef<GlobeControlHandle>(null);
+
+  useImperativeHandle(ref, () => ({
+    navigateTo: (lat, lng, zoom) => controlRef.current?.navigateTo(lat, lng, zoom),
+    zoomIn: () => controlRef.current?.zoomIn(),
+    zoomOut: () => controlRef.current?.zoomOut(),
+  }));
+
   return (
     <div className="w-full h-full bg-background">
       <Canvas
@@ -110,6 +175,7 @@ export default function IntelGlobe(props: Props) {
             cyberThreats={props.cyberThreats}
             onSelectAsset={props.onSelectAsset}
           />
+          <GlobeController controlRef={controlRef} />
         </Suspense>
 
         <OrbitControls
@@ -125,4 +191,7 @@ export default function IntelGlobe(props: Props) {
       </Canvas>
     </div>
   );
-}
+});
+
+IntelGlobe.displayName = 'IntelGlobe';
+export default IntelGlobe;

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import ThreatStatusBar from '@/components/dashboard/ThreatStatusBar';
 import EventFeed from '@/components/dashboard/EventFeed';
 import CyberAttackMonitor from '@/components/dashboard/CyberAttackMonitor';
@@ -12,8 +12,8 @@ import VideoIntelPanel from '@/components/dashboard/VideoIntelPanel';
 import RadioScanner from '@/components/dashboard/RadioScanner';
 import TimelineSlider from '@/components/dashboard/TimelineSlider';
 import AssetDetailPanel, { type SelectedAsset } from '@/components/dashboard/AssetDetailPanel';
-import NexusAI from '@/components/dashboard/NexusAI';
-import IntelGlobe from '@/components/globe/IntelGlobe';
+import NexusAI, { type CortanaAction } from '@/components/dashboard/NexusAI';
+import IntelGlobe, { type GlobeControlHandle } from '@/components/globe/IntelGlobe';
 import { useEarthquakeData } from '@/hooks/useEarthquakeData';
 import { useAircraftData } from '@/hooks/useAircraftData';
 import { useSimulatedData } from '@/hooks/useSimulatedData';
@@ -21,11 +21,21 @@ import { useGDELTData } from '@/hooks/useGDELTData';
 import { infrastructurePoints } from '@/data/mockData';
 import type { LayerVisibility } from '@/types/intelligence';
 
+const REGION_COORDS: Record<string, { lat: number; lng: number }> = {
+  europe: { lat: 50, lng: 10 },
+  asia: { lat: 35, lng: 105 },
+  americas: { lat: 20, lng: -90 },
+  africa: { lat: 5, lng: 25 },
+  middle_east: { lat: 28, lng: 45 },
+  pacific: { lat: -10, lng: 170 },
+};
+
 const Index = () => {
   const { earthquakes } = useEarthquakeData();
   const { aircraft } = useAircraftData();
   const { satellites, ships, marineAnimals, cyberThreats, militaryEvents, missiles, alerts, acknowledgeAlert } = useSimulatedData();
   const { events: gdeltEvents } = useGDELTData();
+  const globeRef = useRef<GlobeControlHandle>(null);
 
   const [layers, setLayers] = useState<LayerVisibility>({
     earthquakes: true,
@@ -51,6 +61,68 @@ const Index = () => {
     else if (command === 'financial') setBottomTab('financial');
     else if (command === 'radio') setBottomTab('radio');
   }, []);
+
+  // Handle Cortana AI actions
+  const handleCortanaAction = useCallback((action: CortanaAction) => {
+    switch (action.action) {
+      case 'navigate_globe':
+        if (action.lat !== undefined && action.lng !== undefined) {
+          globeRef.current?.navigateTo(action.lat, action.lng, action.zoom);
+        }
+        break;
+      case 'show_panel':
+        if (action.panel === 'financial' || action.panel === 'cctv' || action.panel === 'video' || action.panel === 'radio') {
+          setBottomTab(action.panel);
+        }
+        break;
+      case 'select_asset': {
+        const query = (action.query || '').toLowerCase();
+        if (action.type === 'aircraft') {
+          const found = aircraft.find(a => a.callsign?.toLowerCase().includes(query) || a.icao24.toLowerCase().includes(query));
+          if (found) {
+            setSelectedAsset({ type: 'aircraft', data: found });
+            if (found.latitude && found.longitude) globeRef.current?.navigateTo(found.latitude, found.longitude, 6);
+          }
+        } else if (action.type === 'ship') {
+          const found = ships.find(s => s.name.toLowerCase().includes(query));
+          if (found) {
+            setSelectedAsset({ type: 'ship', data: found });
+            globeRef.current?.navigateTo(found.lat, found.lng, 6);
+          }
+        } else if (action.type === 'satellite') {
+          const found = satellites.find(s => s.name.toLowerCase().includes(query));
+          if (found) {
+            setSelectedAsset({ type: 'satellite', data: found });
+            globeRef.current?.navigateTo(found.lat, found.lng, 5);
+          }
+        }
+        break;
+      }
+      case 'toggle_layer':
+        if (action.layer && action.layer in layers) {
+          setLayers(prev => ({ ...prev, [action.layer!]: action.visible ?? !prev[action.layer as keyof LayerVisibility] }));
+        }
+        break;
+      case 'show_alerts':
+        // Already visible in alert panel
+        break;
+      case 'zoom_in':
+        globeRef.current?.zoomIn();
+        break;
+      case 'zoom_out':
+        globeRef.current?.zoomOut();
+        break;
+      case 'rotate_to': {
+        const coords = REGION_COORDS[action.region || ''];
+        if (coords) globeRef.current?.navigateTo(coords.lat, coords.lng, 5);
+        break;
+      }
+    }
+  }, [aircraft, ships, satellites, layers]);
+
+  const getContext = useCallback(() => {
+    return `Layers: ${Object.entries(layers).filter(([,v]) => v).map(([k]) => k).join(', ')}. Bottom panel: ${bottomTab}. Aircraft: ${aircraft.length}, Ships: ${ships.length}, Satellites: ${satellites.length}, Threats: ${cyberThreats.length}`;
+  }, [layers, bottomTab, aircraft, ships, satellites, cyberThreats]);
 
   const counts = {
     earthquakes: earthquakes.length,
@@ -86,6 +158,7 @@ const Index = () => {
           <div className="flex-1 relative">
             <LayerControls layers={layers} onToggle={toggleLayer} counts={counts} />
             <IntelGlobe
+              ref={globeRef}
               earthquakes={earthquakes}
               cyberThreats={cyberThreats}
               militaryEvents={[...militaryEvents, ...gdeltEvents.filter(e => e.type === 'military')]}
@@ -169,8 +242,13 @@ const Index = () => {
         </div>
       </div>
 
-      {/* AI Voice Assistant */}
-      <NexusAI alerts={alerts} onCommand={handleAICommand} />
+      {/* Cortana AI Voice Assistant */}
+      <NexusAI
+        alerts={alerts}
+        onCommand={handleAICommand}
+        onAction={handleCortanaAction}
+        getContext={getContext}
+      />
     </div>
   );
 };

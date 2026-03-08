@@ -51,6 +51,7 @@ const Index = () => {
   const { aircraft } = useAircraftData();
   const { satellites, ships, marineAnimals, cyberThreats, militaryEvents, missiles, alerts, acknowledgeAlert } = useSimulatedData();
   const { events: gdeltEvents } = useGDELTData();
+  const { news, conflicts, loading: newsLoading, refetch: refetchNews } = useRealTimeNews();
   const globeRef = useRef<GlobeControlHandle>(null);
 
   const [layers, setLayers] = useState<LayerVisibility>({

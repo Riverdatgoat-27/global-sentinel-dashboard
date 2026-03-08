@@ -184,7 +184,7 @@ export function useSimulatedData() {
 
   useEffect(() => {
     setShips(generateShips());
-    const interval = setInterval(() => setShips(prev => moveShips(prev)), 3000);
+    const interval = setInterval(() => setShips(prev => moveShips(prev)), 1000);
     return () => clearInterval(interval);
   }, []);
 

@@ -10,6 +10,7 @@ interface Props {
   aircraft: AircraftState[];
   satellites: SatelliteData[];
   ships: ShipData[];
+  submarines?: SubmarineData[];
   missiles?: MissileEvent[];
   infrastructure?: InfrastructurePoint[];
   marineAnimals?: MarineAnimal[];
@@ -21,6 +22,7 @@ interface Props {
     aircraft: boolean;
     satellites: boolean;
     ships: boolean;
+    submarines: boolean;
     infrastructure: boolean;
     missiles: boolean;
     marineAnimals: boolean;

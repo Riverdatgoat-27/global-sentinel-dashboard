@@ -167,7 +167,6 @@ export default function RadioScanner() {
 
     const audio = new Audio();
     audio.preload = 'auto';
-    audio.playsInline = true;
     audioRef.current = audio;
 
     let playbackStarted = false;

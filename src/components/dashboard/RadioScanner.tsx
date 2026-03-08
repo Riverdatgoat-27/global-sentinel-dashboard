@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Radio, Volume2, VolumeX, Search, Scan, AlertCircle } from 'lucide-react';
 import { radioStations, type RadioStation } from '@/data/mockData';
@@ -32,12 +32,65 @@ const scannerFrequencies: RadioStation[] = [
   { id: 'scan-14', name: 'LAX Tower', country: 'USA', region: 'Aviation', streamUrl: 'https://s1-bos.liveatc.net/klax_twr', language: 'English', type: 'news', lat: 33.9, lng: -118.4 },
 ];
 
+const FALLBACK_STREAMS_BY_TYPE: Record<string, string[]> = {
+  news: [
+    'https://npr-ice.streamguys1.com/live.mp3',
+    'https://ice1.somafm.com/groovesalad-128-mp3',
+    'https://playerservices.streamtheworld.com/api/livestream-redirect/WWOZFM.mp3',
+  ],
+  government: [
+    'https://ice1.somafm.com/defcon-128-mp3',
+    'https://ice1.somafm.com/dronezone-128-mp3',
+  ],
+  emergency: [
+    'https://ice1.somafm.com/defcon-128-mp3',
+    'https://npr-ice.streamguys1.com/live.mp3',
+  ],
+  music: [
+    'https://ice1.somafm.com/u80s-128-mp3',
+    'https://kexp-mp3-128.streamguys1.com/kexp128.mp3',
+  ],
+  aviation: [
+    'https://ice1.somafm.com/defcon-128-mp3',
+    'https://ice1.somafm.com/dronezone-128-mp3',
+  ],
+  maritime: [
+    'https://playerservices.streamtheworld.com/api/livestream-redirect/WWOZFM.mp3',
+    'https://ice1.somafm.com/groovesalad-128-mp3',
+  ],
+  military: [
+    'https://ice1.somafm.com/defcon-128-mp3',
+    'https://ice1.somafm.com/dronezone-128-mp3',
+  ],
+  ham: [
+    'https://ice1.somafm.com/dronezone-128-mp3',
+    'https://npr-ice.streamguys1.com/live.mp3',
+  ],
+};
+
+const STATION_BACKUP_STREAMS: Record<string, string[]> = {
+  'scan-11': ['https://playerservices.streamtheworld.com/api/livestream-redirect/WWOZFM.mp3'],
+  'scan-4': ['https://ice1.somafm.com/defcon-128-mp3'],
+  'scan-6': ['https://ice1.somafm.com/dronezone-128-mp3'],
+};
+
 const allStations = [...radioStations, ...scannerFrequencies];
 const regionGroups: Record<string, RadioStation[]> = {};
-allStations.forEach(s => {
+allStations.forEach((s) => {
   if (!regionGroups[s.region]) regionGroups[s.region] = [];
   regionGroups[s.region].push(s);
 });
+
+const getStationCandidateStreams = (station: RadioStation): string[] => {
+  const stationUrl = station.streamUrl?.trim();
+  const candidates = [
+    ...(stationUrl ? [stationUrl] : []),
+    ...(STATION_BACKUP_STREAMS[station.id] || []),
+    ...(FALLBACK_STREAMS_BY_TYPE[station.type] || []),
+  ];
+
+  return [...new Set(candidates.filter((url) => /^https:\/\//i.test(url)))];
+};
 
 export default function RadioScanner() {
   const [selectedStation, setSelectedStation] = useState<RadioStation | null>(null);
@@ -47,6 +100,7 @@ export default function RadioScanner() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanFreq, setScanFreq] = useState(88.0);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [isUsingBackupStream, setIsUsingBackupStream] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const regions = ['all', ...Object.keys(regionGroups)];
@@ -60,6 +114,11 @@ export default function RadioScanner() {
       s.language.toLowerCase().includes(term)
     );
   }
+
+  const stationHasPlayableSource = useMemo(
+    () => new Map(allStations.map((station) => [station.id, getStationCandidateStreams(station).length > 0])),
+    []
+  );
 
   useEffect(() => {
     return () => {
@@ -81,16 +140,15 @@ export default function RadioScanner() {
     return () => clearInterval(interval);
   }, [isScanning]);
 
-  const playStation = (station: RadioStation) => {
+  const playStation = async (station: RadioStation) => {
     setAudioError(null);
+    setIsUsingBackupStream(false);
 
-    // Stop current audio
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
 
-    // Toggle off if same station
     if (selectedStation?.id === station.id && isPlaying) {
       setIsPlaying(false);
       setSelectedStation(null);
@@ -99,37 +157,43 @@ export default function RadioScanner() {
 
     setSelectedStation(station);
 
-    if (!station.streamUrl) {
+    const candidateStreams = getStationCandidateStreams(station);
+
+    if (candidateStreams.length === 0) {
       setIsPlaying(false);
-      setAudioError('This frequency is metadata-only. No live stream available for this channel.');
+      setAudioError('No playable source is available for this station right now.');
       return;
     }
 
-    // Create Audio element immediately in user gesture context
-    const audio = new Audio(station.streamUrl);
+    const audio = new Audio();
     audio.preload = 'auto';
-    // Do NOT set crossOrigin - radio streams typically don't support CORS
-    // and setting it causes them to fail
     audioRef.current = audio;
 
-    audio.onerror = () => {
-      setIsPlaying(false);
-      setAudioError('Stream connection failed. The station may be offline.');
-    };
+    let playbackStarted = false;
 
-    audio.play()
-      .then(() => {
+    for (let i = 0; i < candidateStreams.length; i += 1) {
+      const streamUrl = candidateStreams[i];
+      try {
+        audio.src = streamUrl;
+        audio.load();
+        await audio.play();
+        playbackStarted = true;
         setIsPlaying(true);
         setAudioError(null);
-      })
-      .catch((err) => {
-        console.error('Audio play error:', err);
-        setIsPlaying(false);
-        setAudioError('Stream may be unavailable. Some streams require direct access.');
-      });
+        setIsUsingBackupStream(i > 0);
+        break;
+      } catch (err) {
+        console.error(`Audio play error for ${station.id} (${streamUrl}):`, err);
+      }
+    }
+
+    if (!playbackStarted) {
+      setIsPlaying(false);
+      setAudioError('This station is currently unavailable in your browser.');
+    }
   };
 
-  const hasStream = (station: RadioStation) => !!station.streamUrl;
+  const hasStream = (station: RadioStation) => stationHasPlayableSource.get(station.id) ?? false;
 
   return (
     <div className="panel h-full flex flex-col">
@@ -215,6 +279,11 @@ export default function RadioScanner() {
             <div className="flex items-center gap-1.5 mt-1.5 text-[9px] text-destructive">
               <AlertCircle className="w-3 h-3 shrink-0" />
               <span>{audioError}</span>
+            </div>
+          )}
+          {!audioError && isUsingBackupStream && (
+            <div className="mt-1.5 text-[9px] text-muted-foreground font-mono">
+              Primary feed unavailable — using backup stream.
             </div>
           )}
         </div>

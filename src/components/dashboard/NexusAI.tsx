@@ -386,11 +386,13 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
   const [emotion, setEmotion] = useState<Emotion>('neutral');
   const [conversation, setConversation] = useState<ConversationMessage[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [autoListen, setAutoListen] = useState(true);
   const recognitionRef = useRef<any>(null);
   const spokenAlerts = useRef<Set<string>>(new Set());
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingCommandRef = useRef<string>('');
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const listeningRef = useRef(false);
 
   // Pre-load voices on mount
   useEffect(() => {

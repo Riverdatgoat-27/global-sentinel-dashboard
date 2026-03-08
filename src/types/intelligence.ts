@@ -166,6 +166,21 @@ export interface AlertNotification {
   acknowledged: boolean;
 }
 
+export interface SubmarineData {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  depth: number;
+  speed: number;
+  heading: number;
+  type: 'ballistic' | 'attack' | 'cruise_missile' | 'diesel';
+  country: string;
+  flag: string;
+  class: string;
+  status: 'patrol' | 'transit' | 'port' | 'exercise';
+}
+
 export interface LayerVisibility {
   earthquakes: boolean;
   cyberAttacks: boolean;
@@ -173,6 +188,7 @@ export interface LayerVisibility {
   aircraft: boolean;
   satellites: boolean;
   ships: boolean;
+  submarines: boolean;
   infrastructure: boolean;
   missiles: boolean;
   marineAnimals: boolean;

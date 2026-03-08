@@ -229,8 +229,11 @@ const Index = () => {
                 { label: 'USGS', value: earthquakes.length, color: 'text-neon-amber' },
                 { label: 'AIRCRAFT', value: aircraft.length, color: 'text-neon-cyan' },
                 { label: 'GDELT', value: gdeltEvents.length, color: 'text-primary' },
-                { label: 'THREATS', value: cyberThreats.length + missiles.length, color: 'text-neon-red' },
+                { label: 'MISSILES', value: missiles.length, color: 'text-neon-red' },
+                { label: 'THREATS', value: cyberThreats.length, color: 'text-neon-amber' },
                 { label: 'CCTV', value: cctvCameras.length, color: 'text-neon-green' },
+                { label: 'NEWS', value: news.length, color: 'text-primary' },
+                { label: 'WARS', value: conflicts.length, color: 'text-neon-red' },
               ].map(stat => (
                 <div key={stat.label} className="bg-card/80 backdrop-blur-sm border border-border/50 px-2 py-1 rounded text-[8px] flex items-center gap-1.5">
                   <span className="text-muted-foreground font-mono">{stat.label}</span>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Volume2, VolumeX, X, Brain, Sparkles, Send, Loader2 } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, X, Sparkles, Send, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { AlertNotification } from '@/types/intelligence';
 
@@ -17,6 +17,11 @@ export interface CortanaAction {
   region?: string;
 }
 
+interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 interface Props {
   alerts: AlertNotification[];
   onCommand?: (command: string) => void;
@@ -24,98 +29,232 @@ interface Props {
   getContext?: () => string;
 }
 
+type Emotion = 'neutral' | 'alert' | 'thinking' | 'happy' | 'concerned' | 'serious';
+
 const WAKE_WORD = 'hey cortana';
 
 function speak(text: string, onEnd?: () => void) {
   if (!('speechSynthesis' in window)) { onEnd?.(); return; }
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 1.0;
-  utterance.pitch = 1.15;
-  utterance.volume = 0.9;
+  // More human-like voice settings
+  utterance.rate = 0.95;
+  utterance.pitch = 1.1;
+  utterance.volume = 0.95;
   const voices = window.speechSynthesis.getVoices();
-  // Pick a female voice that sounds closest to Cortana
-  const preferred = voices.find(v =>
-    v.name.includes('Samantha') || v.name.includes('Google UK English Female') ||
-    v.name.includes('Microsoft Zira') || v.name.includes('Karen') ||
-    v.name.includes('Moira') || v.name.includes('Fiona') ||
-    (v.lang.startsWith('en') && v.name.toLowerCase().includes('female'))
-  ) || voices.find(v => v.lang.startsWith('en'));
+  // Priority order for most natural female voices
+  const voicePreference = [
+    'Microsoft Zira', 'Samantha', 'Karen', 'Moira', 'Tessa',
+    'Google UK English Female', 'Fiona', 'Victoria', 'Allison',
+    'Microsoft Jenny', 'Microsoft Aria',
+  ];
+  let preferred = null;
+  for (const name of voicePreference) {
+    preferred = voices.find(v => v.name.includes(name));
+    if (preferred) break;
+  }
+  if (!preferred) preferred = voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('female'));
+  if (!preferred) preferred = voices.find(v => v.lang.startsWith('en'));
   if (preferred) utterance.voice = preferred;
   if (onEnd) utterance.onend = onEnd;
+  utterance.onerror = () => onEnd?.();
   window.speechSynthesis.speak(utterance);
 }
 
-// Hologram ring animation component
-function HologramAvatar({ speaking, listening }: { speaking: boolean; listening: boolean }) {
+// ===== Robot Hologram with Facial Expressions =====
+function RobotHologram({ emotion, speaking, listening }: { emotion: Emotion; speaking: boolean; listening: boolean }) {
+  // Eye expressions based on emotion
+  const getEyeStyle = () => {
+    switch (emotion) {
+      case 'alert': return { scaleY: 1.3, color: 'hsl(var(--neon-red))' };
+      case 'thinking': return { scaleY: 0.5, color: 'hsl(var(--neon-amber))' };
+      case 'happy': return { scaleY: 0.7, color: 'hsl(var(--neon-green))' };
+      case 'concerned': return { scaleY: 0.8, color: 'hsl(var(--neon-amber))' };
+      case 'serious': return { scaleY: 1.1, color: 'hsl(var(--primary))' };
+      default: return { scaleY: 1, color: 'hsl(var(--primary))' };
+    }
+  };
+
+  const eyeStyle = getEyeStyle();
+
   return (
-    <div className="relative w-20 h-20 mx-auto mb-3">
-      {/* Outer glow ring */}
+    <div className="relative w-24 h-28 mx-auto mb-2">
+      {/* Holographic scan lines */}
+      <div className="absolute inset-0 overflow-hidden rounded-lg opacity-20 pointer-events-none">
+        {[...Array(12)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-full h-px bg-primary/60"
+            style={{ top: `${i * 8.3}%` }}
+            animate={{ opacity: [0.2, 0.6, 0.2], x: [-2, 2, -2] }}
+            transition={{ duration: 2, repeat: Infinity, delay: i * 0.15 }}
+          />
+        ))}
+      </div>
+
+      {/* Outer hologram glow */}
       <motion.div
-        className="absolute inset-0 rounded-full"
+        className="absolute -inset-3 rounded-2xl"
         style={{
-          background: 'radial-gradient(circle, hsl(var(--primary) / 0.15) 0%, transparent 70%)',
-          boxShadow: `0 0 30px hsl(var(--primary) / 0.3), 0 0 60px hsl(var(--primary) / 0.15)`,
+          background: `radial-gradient(ellipse, ${eyeStyle.color.replace(')', ' / 0.12)')} 0%, transparent 70%)`,
+          boxShadow: `0 0 40px ${eyeStyle.color.replace(')', ' / 0.2)')}, 0 0 80px ${eyeStyle.color.replace(')', ' / 0.08)')}`,
         }}
         animate={{
-          scale: speaking ? [1, 1.15, 1] : listening ? [1, 1.08, 1] : [1, 1.03, 1],
-          opacity: speaking ? [0.8, 1, 0.8] : [0.5, 0.7, 0.5],
+          scale: speaking ? [1, 1.08, 1] : [1, 1.02, 1],
+          opacity: speaking ? [0.6, 1, 0.6] : [0.4, 0.6, 0.4],
         }}
-        transition={{ duration: speaking ? 0.8 : 2, repeat: Infinity }}
+        transition={{ duration: speaking ? 0.6 : 2.5, repeat: Infinity }}
       />
-      {/* Middle ring */}
-      <motion.div
-        className="absolute inset-2 rounded-full border-2 border-primary/40"
-        animate={{ rotate: 360 }}
-        transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-        style={{ boxShadow: `inset 0 0 15px hsl(var(--primary) / 0.2)` }}
-      />
-      {/* Inner ring */}
-      <motion.div
-        className="absolute inset-4 rounded-full border border-primary/60"
-        animate={{ rotate: -360 }}
-        transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
-      />
-      {/* Core icon */}
-      <div className="absolute inset-0 flex items-center justify-center">
+
+      {/* Robot head shape */}
+      <div className="absolute inset-0 rounded-xl border border-primary/30 bg-card/40 backdrop-blur-sm overflow-hidden"
+        style={{ boxShadow: `inset 0 0 20px ${eyeStyle.color.replace(')', ' / 0.1)')}` }}>
+
+        {/* Forehead panel */}
+        <div className="absolute top-1 left-3 right-3 h-3 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+          <motion.div
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ backgroundColor: eyeStyle.color }}
+            animate={{ opacity: [0.5, 1, 0.5], scale: [0.8, 1, 0.8] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          />
+        </div>
+
+        {/* Eyes */}
+        <div className="absolute top-6 left-0 right-0 flex justify-center gap-4">
+          {/* Left eye */}
+          <motion.div className="relative w-5 h-4 flex items-center justify-center">
+            <motion.div
+              className="w-4 rounded-full"
+              style={{ backgroundColor: eyeStyle.color, height: '3px' }}
+              animate={{
+                scaleY: speaking ? [eyeStyle.scaleY, eyeStyle.scaleY * 0.6, eyeStyle.scaleY] : eyeStyle.scaleY,
+                scaleX: emotion === 'happy' ? 1.2 : emotion === 'thinking' ? 0.9 : 1,
+              }}
+              transition={{ duration: speaking ? 0.3 : 0.5, repeat: speaking ? Infinity : 0 }}
+            />
+            {/* Eye glow */}
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              style={{ boxShadow: `0 0 8px ${eyeStyle.color.replace(')', ' / 0.6)')}` }}
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+            {/* Pupil/iris */}
+            <motion.div
+              className="absolute w-1.5 h-1.5 rounded-full"
+              style={{ backgroundColor: eyeStyle.color }}
+              animate={{
+                x: emotion === 'thinking' ? [0, 2, 0, -2, 0] : 0,
+                scale: emotion === 'alert' ? [1, 1.3, 1] : 1,
+              }}
+              transition={{ duration: emotion === 'thinking' ? 3 : 1.5, repeat: Infinity }}
+            />
+          </motion.div>
+
+          {/* Right eye */}
+          <motion.div className="relative w-5 h-4 flex items-center justify-center">
+            <motion.div
+              className="w-4 rounded-full"
+              style={{ backgroundColor: eyeStyle.color, height: '3px' }}
+              animate={{
+                scaleY: speaking ? [eyeStyle.scaleY, eyeStyle.scaleY * 0.6, eyeStyle.scaleY] : eyeStyle.scaleY,
+                scaleX: emotion === 'happy' ? 1.2 : emotion === 'thinking' ? 0.9 : 1,
+              }}
+              transition={{ duration: speaking ? 0.3 : 0.5, repeat: speaking ? Infinity : 0 }}
+            />
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              style={{ boxShadow: `0 0 8px ${eyeStyle.color.replace(')', ' / 0.6)')}` }}
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
+            />
+            <motion.div
+              className="absolute w-1.5 h-1.5 rounded-full"
+              style={{ backgroundColor: eyeStyle.color }}
+              animate={{
+                x: emotion === 'thinking' ? [0, 2, 0, -2, 0] : 0,
+                scale: emotion === 'alert' ? [1, 1.3, 1] : 1,
+              }}
+              transition={{ duration: emotion === 'thinking' ? 3 : 1.5, repeat: Infinity, delay: 0.1 }}
+            />
+          </motion.div>
+        </div>
+
+        {/* Nose bridge */}
+        <div className="absolute top-11 left-1/2 -translate-x-1/2 w-px h-2 bg-primary/20" />
+
+        {/* Mouth */}
+        <div className="absolute top-14 left-1/2 -translate-x-1/2">
+          {speaking ? (
+            <div className="flex items-end gap-[1px]">
+              {[...Array(9)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="rounded-full"
+                  style={{ width: '2px', backgroundColor: eyeStyle.color }}
+                  animate={{ height: [2, 4 + Math.sin(i * 0.7) * 4, 2] }}
+                  transition={{ duration: 0.2 + Math.random() * 0.15, repeat: Infinity, delay: i * 0.03 }}
+                />
+              ))}
+            </div>
+          ) : (
+            <motion.div
+              className="rounded-full"
+              style={{ backgroundColor: eyeStyle.color, width: emotion === 'happy' ? '14px' : '10px', height: '2px' }}
+              animate={{
+                scaleX: emotion === 'happy' ? [1, 1.1, 1] : emotion === 'concerned' ? [1, 0.8, 1] : 1,
+                borderRadius: emotion === 'happy' ? '0 0 8px 8px' : '4px',
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+          )}
+        </div>
+
+        {/* Cheek indicators */}
+        <div className="absolute top-12 left-2 w-1 h-1 rounded-full bg-primary/20" />
+        <div className="absolute top-12 right-2 w-1 h-1 rounded-full bg-primary/20" />
+
+        {/* Chin/jaw line */}
+        <div className="absolute bottom-3 left-4 right-4 h-px bg-primary/15" />
+
+        {/* Side panels (ears) */}
         <motion.div
-          animate={{
-            scale: speaking ? [1, 1.1, 1] : [1, 1.02, 1],
-          }}
-          transition={{ duration: 1, repeat: Infinity }}
-        >
-          <Brain className="w-7 h-7 text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)]" />
-        </motion.div>
+          className="absolute top-5 -left-0.5 w-1 h-6 rounded-l bg-primary/25"
+          animate={{ opacity: listening ? [0.3, 0.8, 0.3] : 0.3 }}
+          transition={{ duration: 0.8, repeat: Infinity }}
+        />
+        <motion.div
+          className="absolute top-5 -right-0.5 w-1 h-6 rounded-r bg-primary/25"
+          animate={{ opacity: listening ? [0.3, 0.8, 0.3] : 0.3 }}
+          transition={{ duration: 0.8, repeat: Infinity, delay: 0.4 }}
+        />
+
+        {/* Neck / lower section */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-3 bg-primary/5 border-t border-primary/20 rounded-b-lg" />
       </div>
-      {/* Particle dots */}
-      {[...Array(6)].map((_, i) => (
+
+      {/* Floating data particles */}
+      {[...Array(4)].map((_, i) => (
         <motion.div
           key={i}
-          className="absolute w-1 h-1 rounded-full bg-primary/80"
-          style={{
-            top: '50%', left: '50%',
-          }}
+          className="absolute w-0.5 h-0.5 rounded-full bg-primary/60"
+          style={{ top: '50%', left: '50%' }}
           animate={{
-            x: [0, Math.cos(i * 60 * Math.PI / 180) * 38, 0],
-            y: [0, Math.sin(i * 60 * Math.PI / 180) * 38, 0],
-            opacity: [0, 1, 0],
+            x: [0, Math.cos(i * 90 * Math.PI / 180) * 50, 0],
+            y: [0, Math.sin(i * 90 * Math.PI / 180) * 50, 0],
+            opacity: [0, 0.8, 0],
           }}
-          transition={{ duration: 2.5, repeat: Infinity, delay: i * 0.4 }}
+          transition={{ duration: 3, repeat: Infinity, delay: i * 0.7 }}
         />
       ))}
-      {/* Speaking waveform */}
-      {speaking && (
-        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-end gap-0.5">
-          {[...Array(7)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="w-0.5 bg-primary rounded-full"
-              animate={{ height: [3, 10 + Math.random() * 6, 3] }}
-              transition={{ duration: 0.3, repeat: Infinity, delay: i * 0.05 }}
-            />
-          ))}
-        </div>
-      )}
+
+      {/* Emotion label */}
+      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
+        <span className="text-[7px] font-mono uppercase tracking-widest" style={{ color: eyeStyle.color }}>
+          {emotion === 'neutral' ? 'ONLINE' : emotion.toUpperCase()}
+        </span>
+      </div>
     </div>
   );
 }
@@ -131,6 +270,8 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
   const [processing, setProcessing] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [textInput, setTextInput] = useState('');
+  const [emotion, setEmotion] = useState<Emotion>('neutral');
+  const [conversation, setConversation] = useState<ConversationMessage[]>([]);
   const recognitionRef = useRef<any>(null);
   const spokenAlerts = useRef<Set<string>>(new Set());
 
@@ -149,9 +290,10 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
       setVisible(true);
       const criticalCount = alerts.filter(a => a.severity === 'critical' && !a.acknowledged).length;
       const greeting = criticalCount > 0
-        ? `Welcome, General. Cortana online. I'm detecting ${criticalCount} critical alert${criticalCount > 1 ? 's' : ''} requiring your attention. I'm ready to assist with full command capabilities.`
-        : `Welcome, General. Cortana online. All systems nominal. Global monitoring active. I can control the globe, analyze threats, track assets, and manage all station systems. Standing by.`;
+        ? `Welcome back, General. Cortana here. I'm tracking ${criticalCount} critical situation${criticalCount > 1 ? 's' : ''} that need your attention. I've prepared a full briefing whenever you're ready. Just say the word.`
+        : `Good to see you, General. Cortana online and fully operational. All global monitoring systems are green. I'm ready to assist with anything — analysis, tracking, threat assessment, or just a conversation. What's on your mind?`;
       setAiResponse(greeting);
+      setEmotion(criticalCount > 0 ? 'concerned' : 'happy');
       if (!muted) {
         setSpeaking(true);
         speak(greeting, () => setSpeaking(false));
@@ -160,40 +302,50 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
     return () => clearTimeout(timer);
   }, [hasGreeted, alerts, muted]);
 
-  // Speak new critical alerts
+  // Alert voice notifications
   useEffect(() => {
     if (muted) return;
     alerts.filter(a => a.severity === 'critical' && !a.acknowledged && !spokenAlerts.current.has(a.id)).forEach(alert => {
       spokenAlerts.current.add(alert.id);
       if (!hasGreeted) return;
       setTimeout(() => {
+        setEmotion('alert');
         setSpeaking(true);
-        speak(`Alert: ${alert.title}`, () => setSpeaking(false));
+        speak(`General, incoming alert: ${alert.title}`, () => { setSpeaking(false); setEmotion('neutral'); });
       }, 500);
     });
   }, [alerts, muted, hasGreeted]);
 
-  // Process command through AI backend
+  // Process command via AI backend with conversation history
   const processCommand = useCallback(async (command: string) => {
     setProcessing(true);
-    setAiResponse('Processing...');
+    setEmotion('thinking');
+    setAiResponse('');
 
     const context = getContext?.() || '';
-    const alertContext = alerts.filter(a => !a.acknowledged).slice(0, 5)
-      .map(a => `[${a.severity}] ${a.title}: ${a.description}`).join('\n');
+    const alertContext = alerts.filter(a => !a.acknowledged).slice(0, 8)
+      .map(a => `[${a.severity.toUpperCase()}] ${a.title}: ${a.description}`).join('\n');
+
+    // Add user message to conversation
+    const updatedConvo = [...conversation, { role: 'user' as const, content: command }];
 
     try {
       const { data, error } = await supabase.functions.invoke('cortana-command', {
         body: {
           command,
-          context: `Active alerts:\n${alertContext}\n\nDashboard state: ${context}`,
+          context: `Active alerts:\n${alertContext}\n\nDashboard state: ${context}\n\nTimestamp: ${new Date().toISOString()}`,
+          conversationHistory: updatedConvo.slice(-10),
         },
       });
 
       if (error) throw error;
 
-      const { text, actions } = data as { text: string; actions: CortanaAction[] };
+      const { text, emotion: aiEmotion, actions } = data as { text: string; emotion: Emotion; actions: CortanaAction[] };
       setAiResponse(text);
+      setEmotion(aiEmotion || 'neutral');
+
+      // Update conversation history
+      setConversation([...updatedConvo, { role: 'assistant', content: text }]);
 
       if (!muted) {
         setSpeaking(true);
@@ -204,24 +356,23 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
       if (actions?.length) {
         for (const action of actions) {
           onAction?.(action);
-          // Small delay between chained actions
           await new Promise(r => setTimeout(r, 300));
         }
       }
     } catch (e) {
       console.error('Cortana error:', e);
-      const fallback = "I'm experiencing a connection issue, General. Falling back to local processing.";
+      const fallback = "Having a brief connection issue, General. Let me try a local approach.";
       setAiResponse(fallback);
+      setEmotion('concerned');
       if (!muted) {
         setSpeaking(true);
         speak(fallback, () => setSpeaking(false));
       }
-      // Fallback to simple local commands
       handleLocalCommand(command);
     } finally {
       setProcessing(false);
     }
-  }, [alerts, muted, onAction, getContext]);
+  }, [alerts, muted, onAction, getContext, conversation]);
 
   const handleLocalCommand = useCallback((cmd: string) => {
     const lower = cmd.toLowerCase();
@@ -258,11 +409,12 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
         } else if (full.includes(WAKE_WORD) && !activated) {
           setActivated(true);
           setVisible(true);
+          setEmotion('happy');
           if (!muted) {
             setSpeaking(true);
-            speak("Yes, General?", () => setSpeaking(false));
+            speak("I'm here, General. What do you need?", () => setSpeaking(false));
           }
-          setAiResponse("Listening for your command...");
+          setAiResponse("Listening...");
         }
       }
     };
@@ -295,14 +447,28 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
       {/* Floating button */}
       <motion.button
         onClick={() => setVisible(!visible)}
-        className="fixed bottom-4 right-4 z-[100] w-12 h-12 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center backdrop-blur-sm hover:bg-primary/30 transition-colors"
-        whileHover={{ scale: 1.05 }}
+        className="fixed bottom-4 right-4 z-[100] w-14 h-14 rounded-full border flex items-center justify-center backdrop-blur-sm transition-colors"
+        style={{
+          background: `radial-gradient(circle, hsl(var(--primary) / 0.25) 0%, hsl(var(--card) / 0.8) 100%)`,
+          borderColor: `hsl(var(--primary) / 0.4)`,
+          boxShadow: `0 0 25px hsl(var(--primary) / 0.3), 0 4px 15px hsl(0 0% 0% / 0.3)`,
+        }}
+        whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.95 }}
-        style={{ boxShadow: '0 0 20px hsl(var(--primary) / 0.3)' }}
       >
-        <Brain className="w-5 h-5 text-primary" />
+        {/* Mini robot face on button */}
+        <div className="relative w-6 h-7">
+          <div className="absolute top-1 left-0 right-0 flex justify-center gap-2">
+            <motion.div className="w-1.5 h-1 rounded-full bg-primary"
+              animate={{ scaleY: [1, 0.5, 1] }} transition={{ duration: 3, repeat: Infinity }} />
+            <motion.div className="w-1.5 h-1 rounded-full bg-primary"
+              animate={{ scaleY: [1, 0.5, 1] }} transition={{ duration: 3, repeat: Infinity, delay: 0.2 }} />
+          </div>
+          <motion.div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-3 h-0.5 rounded-full bg-primary/60"
+            animate={{ scaleX: [1, 1.2, 1] }} transition={{ duration: 2, repeat: Infinity }} />
+        </div>
         {alerts.filter(a => a.severity === 'critical' && !a.acknowledged).length > 0 && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive rounded-full text-[8px] font-mono flex items-center justify-center text-destructive-foreground">
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive rounded-full text-[8px] font-mono flex items-center justify-center text-destructive-foreground animate-pulse">
             {alerts.filter(a => a.severity === 'critical' && !a.acknowledged).length}
           </span>
         )}
@@ -315,25 +481,26 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-20 right-4 z-[100] w-80 bg-card/95 border border-primary/20 rounded-lg overflow-hidden backdrop-blur-md"
-            style={{ boxShadow: '0 8px 40px hsl(0 0% 0% / 0.6), 0 0 30px hsl(var(--primary) / 0.15)' }}
+            className="fixed bottom-20 right-4 z-[100] w-80 bg-card/95 border rounded-lg overflow-hidden backdrop-blur-md"
+            style={{
+              borderColor: 'hsl(var(--primary) / 0.25)',
+              boxShadow: '0 8px 40px hsl(0 0% 0% / 0.6), 0 0 40px hsl(var(--primary) / 0.12)',
+            }}
           >
             {/* Header */}
             <div className="px-3 py-2 border-b border-border flex items-center gap-2 bg-primary/5">
-              <div className="relative">
-                <Brain className="w-4 h-4 text-primary" />
-                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-neon-green animate-pulse" />
+              <div className="relative w-2 h-2">
+                <div className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
               </div>
               <span className="font-mono text-xs font-semibold text-foreground tracking-wide">CORTANA</span>
-              <span className="text-[8px] text-primary/60 font-mono">NEXUS v5.0</span>
+              <span className="text-[7px] text-muted-foreground font-mono px-1 py-0.5 rounded bg-muted/30 border border-border/50">AI v6.0</span>
               <div className="ml-auto flex items-center gap-1">
-                <button onClick={() => setMuted(!muted)} className="p-1 rounded hover:bg-muted/50 transition-colors" title={muted ? 'Unmute' : 'Mute'}>
+                <button onClick={() => setMuted(!muted)} className="p-1 rounded hover:bg-muted/50 transition-colors">
                   {muted ? <VolumeX className="w-3.5 h-3.5 text-muted-foreground" /> : <Volume2 className="w-3.5 h-3.5 text-neon-cyan" />}
                 </button>
                 <button
                   onClick={listening ? stopListening : startListening}
                   className={`p-1 rounded transition-colors ${listening ? 'bg-neon-red/20 text-neon-red' : 'hover:bg-muted/50 text-muted-foreground'}`}
-                  title={listening ? 'Stop listening' : 'Start voice'}
                 >
                   {listening ? <Mic className="w-3.5 h-3.5 animate-pulse" /> : <MicOff className="w-3.5 h-3.5" />}
                 </button>
@@ -344,41 +511,41 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
             </div>
 
             {/* Hologram + Response */}
-            <div className="p-3 max-h-56 overflow-y-auto">
-              <HologramAvatar speaking={speaking} listening={listening && activated} />
+            <div className="p-3 max-h-64 overflow-y-auto">
+              <RobotHologram emotion={emotion} speaking={speaking} listening={listening && activated} />
 
               {processing && (
-                <div className="flex items-center justify-center gap-2 mb-2">
+                <div className="flex items-center justify-center gap-2 my-2">
                   <Loader2 className="w-3 h-3 text-primary animate-spin" />
-                  <span className="text-[9px] text-primary font-mono">PROCESSING...</span>
+                  <span className="text-[9px] text-primary font-mono animate-pulse">ANALYZING...</span>
                 </div>
               )}
 
               {aiResponse && !processing && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[11px] text-foreground leading-relaxed">
-                  <div className="flex items-center gap-1.5 mb-2">
+                <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="text-[11px] text-foreground leading-relaxed mt-1">
+                  <div className="flex items-center gap-1.5 mb-1.5">
                     <Sparkles className="w-3 h-3 text-primary" />
-                    <span className="text-[9px] text-primary font-mono uppercase">CORTANA</span>
+                    <span className="text-[8px] text-primary font-mono uppercase tracking-wider">CORTANA</span>
                   </div>
-                  {aiResponse}
+                  <div className="pl-4 border-l-2 border-primary/20">{aiResponse}</div>
                 </motion.div>
               )}
             </div>
 
             {/* Voice status */}
             {listening && (
-              <div className="px-3 py-2 border-t border-border bg-muted/20">
+              <div className="px-3 py-2 border-t border-border bg-muted/10">
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-0.5">
                     {[...Array(5)].map((_, i) => (
                       <motion.div key={i} className="w-0.5 bg-neon-cyan rounded-full"
-                        animate={{ height: [4, 12, 4] }}
-                        transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
+                        animate={{ height: activated ? [4, 14, 4] : [3, 6, 3] }}
+                        transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.08 }}
                       />
                     ))}
                   </div>
                   <span className="text-[9px] text-muted-foreground font-mono">
-                    {activated ? 'AWAITING COMMAND...' : `Say "Hey Cortana" to activate`}
+                    {activated ? 'LISTENING...' : 'Say "Hey Cortana"'}
                   </span>
                 </div>
                 {transcript && <p className="text-[10px] text-neon-cyan font-mono mt-1 truncate">"{transcript}"</p>}
@@ -391,36 +558,38 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
                 type="text"
                 value={textInput}
                 onChange={e => setTextInput(e.target.value)}
-                placeholder="Type a command..."
-                className="flex-1 bg-muted/30 border border-border/50 rounded px-2 py-1 text-[10px] font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50"
+                placeholder="Ask me anything..."
+                className="flex-1 bg-muted/20 border border-border/50 rounded px-2 py-1.5 text-[10px] font-mono text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 transition-colors"
                 disabled={processing}
               />
               <button
                 type="submit"
                 disabled={processing || !textInput.trim()}
-                className="p-1 rounded bg-primary/20 hover:bg-primary/30 transition-colors disabled:opacity-30"
+                className="p-1.5 rounded bg-primary/20 hover:bg-primary/30 transition-colors disabled:opacity-20"
               >
-                <Send className="w-3 h-3 text-primary" />
+                {processing ? <Loader2 className="w-3 h-3 text-primary animate-spin" /> : <Send className="w-3 h-3 text-primary" />}
               </button>
             </form>
 
             {/* Quick commands */}
             <div className="px-3 py-2 border-t border-border">
-              <div className="text-[8px] text-muted-foreground font-mono uppercase mb-1.5">Quick Commands</div>
+              <div className="text-[7px] text-muted-foreground font-mono uppercase mb-1.5 tracking-wider">Quick Commands</div>
               <div className="flex flex-wrap gap-1">
                 {[
-                  'Show latest alerts',
-                  'Zoom into Middle East',
-                  'Show military aircraft',
-                  'Switch to CCTV',
-                  'Threat analysis',
-                  'Show all ships',
+                  'Brief me on threats',
+                  'Zoom to Middle East',
+                  'Track military jets',
+                  'Open CCTV feeds',
+                  'Global situation report',
+                  'Show naval assets',
+                  'What should I know?',
+                  'Analyze patterns',
                 ].map(cmd => (
                   <button
                     key={cmd}
                     onClick={() => processCommand(cmd)}
                     disabled={processing}
-                    className="px-2 py-0.5 text-[8px] font-mono bg-muted/30 border border-border/50 rounded hover:bg-primary/10 hover:border-primary/30 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30"
+                    className="px-1.5 py-0.5 text-[7px] font-mono bg-muted/20 border border-border/40 rounded hover:bg-primary/10 hover:border-primary/30 text-muted-foreground hover:text-foreground transition-all disabled:opacity-20"
                   >
                     {cmd}
                   </button>

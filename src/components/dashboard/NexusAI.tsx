@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Volume2, VolumeX, X, Sparkles, Send, Loader2, MessageSquare } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, X, Sparkles, Send, Loader2, MessageSquare, Brain } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import CortanaOverlay from './CortanaOverlay';
 import type { AlertNotification } from '@/types/intelligence';
@@ -33,8 +33,25 @@ interface Props {
 
 type Emotion = 'neutral' | 'alert' | 'thinking' | 'happy' | 'concerned' | 'serious';
 
-const WAKE_WORD = 'hey cortana';
-const SILENCE_TIMEOUT = 4000;
+const WAKE_WORDS = ['hey cortana', 'cortana', 'hey cortanna'];
+const SILENCE_TIMEOUT = 3500;
+const MEMORY_KEY = 'cortana_memory';
+
+// ===== Persistent Memory =====
+function loadMemory(): ConversationMessage[] {
+  try {
+    const stored = localStorage.getItem(MEMORY_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return [];
+}
+
+function saveMemory(messages: ConversationMessage[]) {
+  try {
+    // Keep last 50 messages for long-term memory
+    localStorage.setItem(MEMORY_KEY, JSON.stringify(messages.slice(-50)));
+  } catch {}
+}
 
 // ===== Speech Synthesis =====
 let cachedVoice: SpeechSynthesisVoice | null = null;
@@ -44,7 +61,7 @@ function loadVoices(): Promise<SpeechSynthesisVoice[]> {
     const voices = window.speechSynthesis.getVoices();
     if (voices.length > 0) { resolve(voices); return; }
     window.speechSynthesis.onvoiceschanged = () => resolve(window.speechSynthesis.getVoices());
-    setTimeout(() => resolve(window.speechSynthesis.getVoices()), 1000);
+    setTimeout(() => resolve(window.speechSynthesis.getVoices()), 1500);
   });
 }
 
@@ -53,11 +70,14 @@ function selectBestVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice |
   const priorities = [
     'Microsoft Jenny Online', 'Microsoft Aria Online', 'Google UK English Female',
     'Samantha', 'Karen', 'Moira', 'Tessa', 'Fiona', 'Victoria', 'Allison', 'Ava',
+    'Microsoft Zira', 'Google US English',
   ];
   for (const name of priorities) {
     const found = voices.find(v => v.name.includes(name));
     if (found) { cachedVoice = found; return found; }
   }
+  const enFemale = voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('female'));
+  if (enFemale) { cachedVoice = enFemale; return enFemale; }
   const fallback = voices.find(v => v.lang.startsWith('en')) || voices[0] || null;
   cachedVoice = fallback;
   return fallback;
@@ -66,33 +86,33 @@ function selectBestVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice |
 function speak(text: string, onEnd?: () => void) {
   if (!('speechSynthesis' in window)) { onEnd?.(); return; }
   window.speechSynthesis.cancel();
-  
+
   const cleanText = text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/#{1,6}\s/g, '').replace(/\{[^}]*\}/g, '').replace(/\[.*?\]/g, '').trim();
   if (!cleanText) { onEnd?.(); return; }
-  
+
   const sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
   let idx = 0;
-  
+
   const speakNext = async () => {
     if (idx >= sentences.length) { onEnd?.(); return; }
     const sentence = sentences[idx].trim();
     if (!sentence) { idx++; speakNext(); return; }
-    
+
     const voices = await loadVoices();
     const voice = selectBestVoice(voices);
     const utterance = new SpeechSynthesisUtterance(sentence);
     utterance.rate = 0.95;
-    utterance.pitch = 1.08;
+    utterance.pitch = 1.05;
     utterance.volume = 1.0;
     if (voice) utterance.voice = voice;
-    
-    utterance.onend = () => { idx++; setTimeout(speakNext, 150); };
+
+    utterance.onend = () => { idx++; setTimeout(speakNext, 120); };
     utterance.onerror = () => { idx++; speakNext(); };
     window.speechSynthesis.speak(utterance);
   };
-  
+
   speakNext();
-  
+
   // Chrome keepalive
   const keepAlive = setInterval(() => {
     if (!window.speechSynthesis.speaking) { clearInterval(keepAlive); return; }
@@ -114,22 +134,35 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
   const [speaking, setSpeaking] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [emotion, setEmotion] = useState<Emotion>('neutral');
-  const [conversation, setConversation] = useState<ConversationMessage[]>([]);
+  const [conversation, setConversation] = useState<ConversationMessage[]>(loadMemory);
   const [showHistory, setShowHistory] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(true);
   const recognitionRef = useRef<any>(null);
   const spokenAlerts = useRef<Set<string>>(new Set());
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingCommandRef = useRef<string>('');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const listeningRef = useRef(false);
+  const activatedRef = useRef(false);
+  const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Keep activatedRef in sync
+  useEffect(() => { activatedRef.current = activated; }, [activated]);
 
   useEffect(() => {
     if ('speechSynthesis' in window) loadVoices();
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) setVoiceSupported(false);
   }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation, aiResponse]);
+
+  // Save conversation to memory
+  useEffect(() => {
+    if (conversation.length > 0) saveMemory(conversation);
+  }, [conversation]);
 
   // Welcome
   useEffect(() => {
@@ -138,14 +171,20 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
       setHasGreeted(true);
       setVisible(true);
       const criticalCount = alerts.filter(a => a.severity === 'critical' && !a.acknowledged).length;
-      const greeting = criticalCount > 0
-        ? `Welcome back, General. Cortana online. I'm tracking ${criticalCount} critical situations. Say "Hey Cortana" or type a command anytime.`
-        : `Good to see you, General. Cortana online. All systems green. I'm always listening — just say "Hey Cortana" to activate me.`;
+      const prevMsgs = loadMemory();
+      const returningUser = prevMsgs.length > 2;
+      const greeting = returningUser
+        ? (criticalCount > 0
+          ? `Welcome back, General. I remember our last conversation. I'm tracking ${criticalCount} critical situations requiring your attention.`
+          : `Good to see you again, General. Cortana online with full memory intact. All systems nominal. Say "Hey Cortana" or type a command.`)
+        : (criticalCount > 0
+          ? `Welcome, General. Cortana online. I'm tracking ${criticalCount} critical situations. Say "Hey Cortana" or type a command anytime.`
+          : `Welcome, General. Cortana online. All systems green. I'm always listening — just say "Hey Cortana" to activate me.`);
       setAiResponse(greeting);
-      setConversation([{ role: 'assistant', content: greeting, timestamp: Date.now() }]);
+      setConversation(prev => [...prev, { role: 'assistant', content: greeting, timestamp: Date.now() }]);
       setEmotion(criticalCount > 0 ? 'concerned' : 'happy');
       if (!muted) { setSpeaking(true); speak(greeting, () => setSpeaking(false)); }
-    }, 2500);
+    }, 2000);
     return () => clearTimeout(timer);
   }, [hasGreeted, alerts, muted]);
 
@@ -180,7 +219,7 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
         body: {
           command,
           context: `Active alerts:\n${alertContext}\n\nDashboard state: ${context}\n\nTimestamp: ${new Date().toISOString()}`,
-          conversationHistory: updatedConvo.slice(-12).map(m => ({ role: m.role, content: m.content })),
+          conversationHistory: updatedConvo.slice(-20).map(m => ({ role: m.role, content: m.content })),
         },
       });
 
@@ -216,23 +255,26 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     pendingCommandRef.current = commandSoFar;
     silenceTimerRef.current = setTimeout(() => {
-      if (pendingCommandRef.current.length > 3 && activated) {
+      if (pendingCommandRef.current.length > 2 && activatedRef.current) {
         processCommand(pendingCommandRef.current);
         setActivated(false);
+        activatedRef.current = false;
         setTranscript('');
         pendingCommandRef.current = '';
       }
     }, SILENCE_TIMEOUT);
-  }, [activated, processCommand]);
+  }, [processCommand]);
 
   const startListening = useCallback(() => {
     if (listeningRef.current) return;
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) { console.warn('Speech recognition not available'); return; }
+    if (!SR) { setVoiceSupported(false); return; }
+
     const recognition = new SR();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
+    recognition.maxAlternatives = 3;
 
     recognition.onresult = (event: any) => {
       let interim = '', final = '';
@@ -243,32 +285,53 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
       const full = (final + interim).toLowerCase().trim();
       setTranscript(full);
 
-      if (full.includes(WAKE_WORD) || activated) {
-        let commandPart = full;
-        const wakeIdx = full.indexOf(WAKE_WORD);
-        if (wakeIdx >= 0) commandPart = full.substring(wakeIdx + WAKE_WORD.length).trim();
+      // Check for wake word
+      const wakeDetected = WAKE_WORDS.some(w => full.includes(w));
 
-        if (!activated && full.includes(WAKE_WORD)) {
+      if (wakeDetected || activatedRef.current) {
+        let commandPart = full;
+        // Strip wake word from command
+        for (const w of WAKE_WORDS) {
+          const idx = full.indexOf(w);
+          if (idx >= 0) {
+            commandPart = full.substring(idx + w.length).trim();
+            break;
+          }
+        }
+
+        if (!activatedRef.current && wakeDetected) {
           setActivated(true);
+          activatedRef.current = true;
           setVisible(true);
           setEmotion('happy');
           if (!muted) { setSpeaking(true); speak("I'm here, General.", () => setSpeaking(false)); }
           setAiResponse("Listening... speak your command.");
-          if (commandPart.length > 3) resetSilenceTimer(commandPart);
-        } else if (activated && commandPart.length > 3) {
+          if (commandPart.length > 2) resetSilenceTimer(commandPart);
+        } else if (activatedRef.current && commandPart.length > 2) {
           resetSilenceTimer(commandPart);
         }
       }
     };
 
     recognition.onerror = (e: any) => {
-      if (e.error !== 'no-speech' && e.error !== 'aborted') {
-        console.warn('Speech error:', e.error);
+      console.warn('Speech error:', e.error);
+      if (e.error === 'not-allowed') {
+        setVoiceSupported(false);
+        setListening(false);
+        listeningRef.current = false;
+        return;
       }
     };
+
     recognition.onend = () => {
+      // Auto-restart if we should still be listening
       if (listeningRef.current) {
-        try { recognition.start(); } catch {}
+        if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+        restartTimerRef.current = setTimeout(() => {
+          if (listeningRef.current && recognitionRef.current) {
+            try { recognitionRef.current.start(); } catch {}
+          }
+        }, 200);
       }
     };
 
@@ -277,23 +340,28 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
       recognition.start();
       setListening(true);
       listeningRef.current = true;
-    } catch {}
-  }, [activated, muted, resetSilenceTimer]);
+    } catch (e) {
+      console.error('Failed to start speech recognition:', e);
+      setVoiceSupported(false);
+    }
+  }, [muted, resetSilenceTimer]);
 
   const stopListening = useCallback(() => {
     setListening(false);
     listeningRef.current = false;
     setActivated(false);
+    activatedRef.current = false;
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch {}
       recognitionRef.current = null;
     }
   }, []);
 
-  // Auto-start listening
+  // Auto-start listening when panel opens
   useEffect(() => {
-    if (visible && !listening) startListening();
+    if (visible && !listening && voiceSupported) startListening();
   }, [visible]);
 
   const handleTextSubmit = useCallback((e: React.FormEvent) => {
@@ -303,11 +371,18 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
     setTextInput('');
   }, [textInput, processing, processCommand]);
 
+  const clearMemory = useCallback(() => {
+    localStorage.removeItem(MEMORY_KEY);
+    setConversation([]);
+    setAiResponse('Memory cleared, General. Starting fresh.');
+    if (!muted) speak('Memory cleared, General. Starting fresh.');
+  }, [muted]);
+
   const criticalCount = alerts.filter(a => a.severity === 'critical' && !a.acknowledged).length;
 
   return (
     <>
-      {/* Walking hologram overlay - always visible */}
+      {/* Walking hologram overlay */}
       <CortanaOverlay
         emotion={emotion}
         speaking={speaking}
@@ -318,21 +393,16 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
       {/* Floating button */}
       <motion.button
         onClick={() => setVisible(!visible)}
-        className="fixed bottom-4 right-4 z-[100] w-14 h-14 rounded-full border flex items-center justify-center backdrop-blur-sm transition-colors"
+        className="fixed bottom-4 right-4 z-[100] w-12 h-12 rounded-full border flex items-center justify-center backdrop-blur-sm transition-colors"
         style={{
           background: `radial-gradient(circle, hsl(var(--primary) / 0.25) 0%, hsl(var(--card) / 0.8) 100%)`,
           borderColor: `hsl(var(--primary) / 0.4)`,
-          boxShadow: `0 0 25px hsl(var(--primary) / 0.3), 0 4px 15px hsl(0 0% 0% / 0.3)`,
+          boxShadow: `0 0 20px hsl(var(--primary) / 0.3), 0 4px 12px hsl(0 0% 0% / 0.3)`,
         }}
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.95 }}
       >
-        <div className="relative w-6 h-8">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full border border-primary/60" />
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 w-5 h-4 rounded-t-lg border-x border-t border-primary/40" />
-          <motion.div className="absolute top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary"
-            animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} />
-        </div>
+        <Brain className="w-5 h-5 text-primary" />
         {criticalCount > 0 && (
           <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive rounded-full text-[8px] font-mono flex items-center justify-center text-destructive-foreground animate-pulse">
             {criticalCount}
@@ -352,7 +422,7 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-20 right-4 z-[100] w-80 bg-card/95 border rounded-lg overflow-hidden backdrop-blur-md"
+            className="fixed bottom-18 right-4 z-[100] w-80 bg-card/95 border rounded-lg overflow-hidden backdrop-blur-md"
             style={{
               borderColor: 'hsl(var(--primary) / 0.25)',
               boxShadow: '0 8px 40px hsl(0 0% 0% / 0.6), 0 0 40px hsl(var(--primary) / 0.12)',
@@ -363,10 +433,15 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
               <motion.div className="w-2 h-2 rounded-full bg-neon-green"
                 animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 1.5, repeat: Infinity }} />
               <span className="font-mono text-xs font-semibold text-foreground tracking-wide">CORTANA</span>
-              <span className="text-[7px] text-muted-foreground font-mono px-1 py-0.5 rounded bg-muted/30 border border-border/50">v8.0</span>
+              <span className="text-[7px] text-muted-foreground font-mono px-1 py-0.5 rounded bg-muted/30 border border-border/50">AI</span>
               {listening && (
                 <span className="text-[7px] text-neon-cyan font-mono px-1 py-0.5 rounded bg-neon-cyan/10 border border-neon-cyan/20 animate-pulse">
-                  🎤 LIVE
+                  🎤 {activated ? 'ACTIVE' : 'LISTENING'}
+                </span>
+              )}
+              {!voiceSupported && (
+                <span className="text-[7px] text-neon-amber font-mono px-1 py-0.5 rounded bg-neon-amber/10 border border-neon-amber/20">
+                  TEXT ONLY
                 </span>
               )}
               <div className="ml-auto flex items-center gap-1">
@@ -377,10 +452,12 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
                 <button onClick={() => setMuted(!muted)} className="p-1 rounded hover:bg-muted/50 transition-colors">
                   {muted ? <VolumeX className="w-3.5 h-3.5 text-muted-foreground" /> : <Volume2 className="w-3.5 h-3.5 text-neon-cyan" />}
                 </button>
-                <button onClick={listening ? stopListening : startListening}
-                  className={`p-1 rounded transition-colors ${listening ? 'bg-neon-red/20 text-neon-red' : 'hover:bg-muted/50 text-muted-foreground'}`}>
-                  {listening ? <Mic className="w-3.5 h-3.5 animate-pulse" /> : <MicOff className="w-3.5 h-3.5" />}
-                </button>
+                {voiceSupported && (
+                  <button onClick={listening ? stopListening : startListening}
+                    className={`p-1 rounded transition-colors ${listening ? 'bg-neon-red/20 text-neon-red' : 'hover:bg-muted/50 text-muted-foreground'}`}>
+                    {listening ? <Mic className="w-3.5 h-3.5 animate-pulse" /> : <MicOff className="w-3.5 h-3.5" />}
+                  </button>
+                )}
                 <button onClick={() => setVisible(false)} className="p-1 rounded hover:bg-muted/50 transition-colors">
                   <X className="w-3.5 h-3.5 text-muted-foreground" />
                 </button>
@@ -388,13 +465,17 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
             </div>
 
             {/* Content */}
-            <div className="max-h-60 overflow-y-auto">
+            <div className="max-h-64 overflow-y-auto">
               {showHistory ? (
                 <div className="p-2 space-y-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[8px] text-muted-foreground font-mono">{conversation.length} MESSAGES</span>
+                    <button onClick={clearMemory} className="text-[8px] text-destructive font-mono hover:underline">CLEAR MEMORY</button>
+                  </div>
                   {conversation.length === 0 && (
                     <p className="text-[10px] text-muted-foreground text-center py-4 font-mono">No conversation yet</p>
                   )}
-                  {conversation.map((msg, i) => (
+                  {conversation.slice(-20).map((msg, i) => (
                     <motion.div key={i} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
                       className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[85%] px-2.5 py-1.5 rounded-lg text-[10px] leading-relaxed ${
@@ -416,7 +497,7 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
                   {processing && (
                     <div className="flex items-center justify-center gap-2 my-2">
                       <Loader2 className="w-3 h-3 text-primary animate-spin" />
-                      <span className="text-[9px] text-primary font-mono animate-pulse">ANALYZING...</span>
+                      <span className="text-[9px] text-primary font-mono animate-pulse">DEEP ANALYSIS...</span>
                     </div>
                   )}
                   {aiResponse && !processing && (
@@ -446,7 +527,7 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
                     ))}
                   </div>
                   <span className="text-[9px] text-muted-foreground font-mono">
-                    {activated ? 'SPEAK NOW • 4s silence = execute' : 'Say "Hey Cortana" to activate'}
+                    {activated ? '🔴 SPEAK NOW • auto-executes on silence' : 'Say "Hey Cortana" to activate'}
                   </span>
                 </div>
                 {transcript && <p className="text-[10px] text-neon-cyan font-mono mt-1 truncate">"{transcript}"</p>}
@@ -474,16 +555,16 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
               <div className="text-[7px] text-muted-foreground font-mono uppercase mb-1.5 tracking-wider">Quick Commands</div>
               <div className="flex flex-wrap gap-1">
                 {[
+                  'Situation report',
                   'Brief me on threats',
-                  'Global situation report',
                   'Zoom to Middle East',
                   'Show all aircraft',
-                  'Show naval assets',
                   'Track submarines',
-                  'Nuclear arsenal status',
-                  'What wars are active?',
-                  'Financial markets update',
+                  'Nuclear status',
+                  'Active wars?',
                   'Open CCTV feeds',
+                  'Financial markets',
+                  'Analyze cyber threats',
                 ].map(cmd => (
                   <button key={cmd} onClick={() => processCommand(cmd)} disabled={processing}
                     className="px-1.5 py-0.5 text-[7px] font-mono bg-muted/20 border border-border/40 rounded hover:bg-primary/10 hover:border-primary/30 text-muted-foreground hover:text-foreground transition-all disabled:opacity-20">

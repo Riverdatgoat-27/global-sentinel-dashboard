@@ -237,6 +237,44 @@ export default function EarthMesh() {
       toSphere(-25, 46), toSphere(-24, 47), toSphere(-20, 48), toSphere(-16, 50),
       toSphere(-12, 49),
     ]);
+    // Greenland
+    c.push([
+      toSphere(60, -43), toSphere(62, -42), toSphere(65, -40), toSphere(68, -32),
+      toSphere(70, -26), toSphere(72, -22), toSphere(74, -20), toSphere(76, -18),
+      toSphere(78, -20), toSphere(80, -25), toSphere(82, -30), toSphere(83, -35),
+      toSphere(83, -40), toSphere(82, -48), toSphere(80, -55), toSphere(78, -65),
+      toSphere(76, -70), toSphere(74, -58), toSphere(72, -55), toSphere(70, -52),
+      toSphere(68, -50), toSphere(65, -45), toSphere(62, -44), toSphere(60, -43),
+    ]);
+    // Iceland
+    c.push([
+      toSphere(64, -22), toSphere(65, -18), toSphere(66, -15), toSphere(66, -14),
+      toSphere(65.5, -14), toSphere(64.5, -16), toSphere(63.5, -18), toSphere(63.8, -22),
+      toSphere(64, -22),
+    ]);
+    // Greece (Peloponnese + mainland)
+    c.push([
+      toSphere(39.5, 20), toSphere(40, 21), toSphere(40.5, 23), toSphere(40, 24),
+      toSphere(39, 24), toSphere(38, 23.5), toSphere(37, 22), toSphere(36.5, 23),
+      toSphere(37, 24), toSphere(37.5, 24), toSphere(38.5, 23), toSphere(39.5, 20),
+    ]);
+    // Philippines (approx)
+    c.push([
+      toSphere(18, 121), toSphere(17, 122), toSphere(15, 121), toSphere(13, 124),
+      toSphere(11, 124), toSphere(9, 126), toSphere(7, 126), toSphere(6, 125),
+      toSphere(7, 122), toSphere(10, 119), toSphere(12, 120), toSphere(14, 120),
+      toSphere(16, 120), toSphere(18, 121),
+    ]);
+    // Sri Lanka
+    c.push([
+      toSphere(9.8, 80), toSphere(8, 81.5), toSphere(6.5, 81), toSphere(6, 80.5),
+      toSphere(7, 79.8), toSphere(8.5, 79.8), toSphere(9.8, 80),
+    ]);
+    // Taiwan
+    c.push([
+      toSphere(25, 121), toSphere(24, 122), toSphere(23, 121), toSphere(22, 120.5),
+      toSphere(23, 120), toSphere(24.5, 121), toSphere(25, 121),
+    ]);
     return c;
   }, []);
 

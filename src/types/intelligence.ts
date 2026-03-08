@@ -124,6 +124,7 @@ export interface VideoIntel {
   title: string;
   thumbnailUrl: string;
   videoUrl: string;
+  embedUrl?: string;
   source: string;
   category: 'military' | 'protest' | 'disaster' | 'cyber' | 'geopolitical';
   timestamp: string;

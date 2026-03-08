@@ -83,12 +83,12 @@ export const cctvCameras: CCTVCamera[] = [
 ];
 
 export const videoIntel: VideoIntel[] = [
-  { id: 'vid-1', title: 'Military Convoy Movement - Eastern Europe', thumbnailUrl: '', videoUrl: '', source: 'OSINT Aggregator', category: 'military', timestamp: new Date().toISOString(), location: 'Eastern Europe' },
-  { id: 'vid-2', title: 'Mass Protest Downtown - Tehran', thumbnailUrl: '', videoUrl: '', source: 'Social Media', category: 'protest', timestamp: new Date().toISOString(), location: 'Tehran, Iran' },
-  { id: 'vid-3', title: 'Naval Exercise - Pacific Fleet', thumbnailUrl: '', videoUrl: '', source: 'Naval News', category: 'military', timestamp: new Date().toISOString(), location: 'Western Pacific' },
-  { id: 'vid-4', title: 'Earthquake Aftermath - Indonesia', thumbnailUrl: '', videoUrl: '', source: 'Reuters', category: 'disaster', timestamp: new Date().toISOString(), location: 'Indonesia' },
-  { id: 'vid-5', title: 'Cyber Attack Response Briefing', thumbnailUrl: '', videoUrl: '', source: 'CISA', category: 'cyber', timestamp: new Date().toISOString(), location: 'Washington DC' },
-  { id: 'vid-6', title: 'Airstrike Footage - Conflict Zone', thumbnailUrl: '', videoUrl: '', source: 'Liveuamap', category: 'military', timestamp: new Date().toISOString(), location: 'Middle East' },
+  { id: 'vid-1', title: 'Military Convoy Movement - Eastern Europe', thumbnailUrl: '', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', embedUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=0', source: 'OSINT Aggregator', category: 'military', timestamp: new Date().toISOString(), location: 'Eastern Europe' },
+  { id: 'vid-2', title: 'Mass Protest Downtown - Tehran', thumbnailUrl: '', videoUrl: '', embedUrl: '', source: 'Social Media / X', category: 'protest', timestamp: new Date().toISOString(), location: 'Tehran, Iran' },
+  { id: 'vid-3', title: 'Naval Exercise - Pacific Fleet', thumbnailUrl: '', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', embedUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=0', source: 'Naval News', category: 'military', timestamp: new Date().toISOString(), location: 'Western Pacific' },
+  { id: 'vid-4', title: 'Earthquake Aftermath - Indonesia', thumbnailUrl: '', videoUrl: '', embedUrl: '', source: 'Reuters', category: 'disaster', timestamp: new Date().toISOString(), location: 'Indonesia' },
+  { id: 'vid-5', title: 'Cyber Attack Response Briefing', thumbnailUrl: '', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', embedUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=0', source: 'CISA', category: 'cyber', timestamp: new Date().toISOString(), location: 'Washington DC' },
+  { id: 'vid-6', title: 'Airstrike Footage - Conflict Zone', thumbnailUrl: '', videoUrl: '', embedUrl: '', source: 'Liveuamap / Telegram', category: 'military', timestamp: new Date().toISOString(), location: 'Middle East' },
 ];
 
 export const missileEvents: MissileEvent[] = [

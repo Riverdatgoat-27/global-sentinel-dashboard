@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { GlobeEvent, CyberThreat, AircraftState, SatelliteData, ShipData, MissileEvent, InfrastructurePoint } from '@/types/intelligence';
@@ -35,7 +35,49 @@ function latLngToVector3(lat: number, lng: number, radius = 2.01): THREE.Vector3
   );
 }
 
-// Pulsing event markers with ring effect
+// Create an airplane shape
+function createAircraftShape(): THREE.Shape {
+  const s = new THREE.Shape();
+  // Fuselage
+  s.moveTo(0, 1.2);
+  s.lineTo(0.15, 0.4);
+  // Right wing
+  s.lineTo(1, 0.2);
+  s.lineTo(1, 0);
+  s.lineTo(0.15, -0.1);
+  // Right tail
+  s.lineTo(0.15, -0.8);
+  s.lineTo(0.5, -1.2);
+  s.lineTo(0.5, -1.3);
+  s.lineTo(0, -0.9);
+  // Left tail
+  s.lineTo(-0.5, -1.3);
+  s.lineTo(-0.5, -1.2);
+  s.lineTo(-0.15, -0.8);
+  // Left wing
+  s.lineTo(-0.15, -0.1);
+  s.lineTo(-1, 0);
+  s.lineTo(-1, 0.2);
+  s.lineTo(-0.15, 0.4);
+  s.lineTo(0, 1.2);
+  return s;
+}
+
+// Create a ship shape (top-down hull)
+function createShipShape(): THREE.Shape {
+  const s = new THREE.Shape();
+  s.moveTo(0, 1.5);    // Bow
+  s.lineTo(0.4, 0.6);
+  s.lineTo(0.45, -0.5);
+  s.lineTo(0.3, -1.2);
+  s.lineTo(0, -1.5);   // Stern
+  s.lineTo(-0.3, -1.2);
+  s.lineTo(-0.45, -0.5);
+  s.lineTo(-0.4, 0.6);
+  s.lineTo(0, 1.5);
+  return s;
+}
+
 function EventMarkers({ events, color, pulseSpeed = 3 }: { events: { lat: number; lng: number }[]; color?: string; pulseSpeed?: number }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const ringRef = useRef<THREE.InstancedMesh>(null);
@@ -46,7 +88,6 @@ function EventMarkers({ events, color, pulseSpeed = 3 }: { events: { lat: number
     if (!meshRef.current || events.length === 0) return;
     pulseRef.current += delta;
     const scale = 1 + Math.sin(pulseRef.current * pulseSpeed) * 0.3;
-
     events.forEach((event, i) => {
       const pos = latLngToVector3(event.lat, event.lng);
       dummy.position.copy(pos);
@@ -89,11 +130,6 @@ function EventMarkers({ events, color, pulseSpeed = 3 }: { events: { lat: number
 
 function CyberAttackLines({ threats }: { threats: CyberThreat[] }) {
   const groupRef = useRef<THREE.Group>(null);
-  const progressRef = useRef(0);
-
-  useFrame((_, delta) => {
-    progressRef.current = (progressRef.current + delta * 0.3) % 1;
-  });
 
   const lineObjects = useMemo(() => {
     return threats.map(threat => {
@@ -101,7 +137,6 @@ function CyberAttackLines({ threats }: { threats: CyberThreat[] }) {
       const end = latLngToVector3(threat.targetLat, threat.targetLng, 2.02);
       const mid = start.clone().add(end).multiplyScalar(0.5);
       mid.normalize().multiplyScalar(2.5);
-
       const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
       const points = curve.getPoints(50);
       const geom = new THREE.BufferGeometry().setFromPoints(points);
@@ -127,14 +162,12 @@ function MissileArcs({ missiles }: { missiles: MissileEvent[] }) {
 
   useFrame((_, delta) => {
     progressRef.current = (progressRef.current + delta * 0.4) % 1;
-    
     if (meshRef.current) {
       missiles.forEach((m, i) => {
         const start = latLngToVector3(m.launchLat, m.launchLng, 2.02);
         const end = latLngToVector3(m.targetLat, m.targetLng, 2.02);
         const mid = start.clone().add(end).multiplyScalar(0.5);
         mid.normalize().multiplyScalar(3.0);
-        
         const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
         const point = curve.getPoint(progressRef.current);
         dummy.position.copy(point);
@@ -171,88 +204,77 @@ function MissileArcs({ missiles }: { missiles: MissileEvent[] }) {
         <sphereGeometry args={[1, 6, 6]} />
         <meshBasicMaterial color="#dc2626" />
       </instancedMesh>
-      <EventMarkers 
-        events={missiles.map(m => ({ lat: m.launchLat, lng: m.launchLng }))} 
-        color="#ea580c" 
-        pulseSpeed={5}
-      />
-      <EventMarkers 
-        events={missiles.map(m => ({ lat: m.targetLat, lng: m.targetLng }))} 
-        color="#dc2626" 
-        pulseSpeed={6}
-      />
+      <EventMarkers events={missiles.map(m => ({ lat: m.launchLat, lng: m.launchLng }))} color="#ea580c" pulseSpeed={5} />
+      <EventMarkers events={missiles.map(m => ({ lat: m.targetLat, lng: m.targetLng }))} color="#dc2626" pulseSpeed={6} />
     </group>
   );
 }
 
-// Aircraft: diamond shape for civilian, triangle for military
+// Aircraft with proper airplane silhouettes that move along heading
 function AircraftMarkers({ aircraft }: { aircraft: AircraftState[] }) {
-  const civRef = useRef<THREE.InstancedMesh>(null);
-  const milRef = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const groupRef = useRef<THREE.Group>(null);
+  const meshesRef = useRef<THREE.Mesh[]>([]);
+  const prevPositions = useRef<Map<string, THREE.Vector3>>(new Map());
 
-  const { civilian, military } = useMemo(() => {
-    const mil = aircraft.filter(a => 
-      a.callsign?.startsWith('MIL') || 
-      a.category === 'military' ||
-      ['United States', 'Russia', 'China'].includes(a.originCountry) && (a.velocity || 0) > 280
-    );
-    const civ = aircraft.filter(a => !mil.includes(a));
-    return { civilian: civ, military: mil };
-  }, [aircraft]);
+  const aircraftGeom = useMemo(() => {
+    const shape = createAircraftShape();
+    return new THREE.ShapeGeometry(shape);
+  }, []);
 
-  useFrame(() => {
-    if (civRef.current && civilian.length > 0) {
-      civilian.forEach((ac, i) => {
-        if (!ac.latitude || !ac.longitude) return;
-        const alt = 2.01 + (ac.altitude || 10000) / 1000000;
-        const pos = latLngToVector3(ac.latitude, ac.longitude, alt);
-        dummy.position.copy(pos);
-        // Orient based on heading
-        if (ac.heading) {
-          dummy.rotation.z = (ac.heading * Math.PI) / 180;
-        }
-        dummy.scale.setScalar(0.008);
-        dummy.updateMatrix();
-        civRef.current!.setMatrixAt(i, dummy.matrix);
-      });
-      civRef.current.instanceMatrix.needsUpdate = true;
+  const civMat = useMemo(() => new THREE.MeshBasicMaterial({ 
+    color: '#38bdf8', transparent: true, opacity: 0.85, side: THREE.DoubleSide 
+  }), []);
+  const milMat = useMemo(() => new THREE.MeshBasicMaterial({ 
+    color: '#ef4444', transparent: true, opacity: 0.9, side: THREE.DoubleSide 
+  }), []);
+
+  useFrame((_, delta) => {
+    if (!groupRef.current) return;
+
+    // Remove old meshes
+    while (groupRef.current.children.length > 0) {
+      groupRef.current.remove(groupRef.current.children[0]);
     }
-    if (milRef.current && military.length > 0) {
-      military.forEach((ac, i) => {
-        if (!ac.latitude || !ac.longitude) return;
-        const alt = 2.01 + (ac.altitude || 10000) / 1000000;
-        const pos = latLngToVector3(ac.latitude, ac.longitude, alt);
-        dummy.position.copy(pos);
-        if (ac.heading) {
-          dummy.rotation.z = (ac.heading * Math.PI) / 180;
-        }
-        dummy.scale.setScalar(0.013);
-        dummy.updateMatrix();
-        milRef.current!.setMatrixAt(i, dummy.matrix);
-      });
-      milRef.current.instanceMatrix.needsUpdate = true;
-    }
+    meshesRef.current = [];
+
+    aircraft.forEach((ac) => {
+      if (!ac.latitude || !ac.longitude) return;
+
+      const isMilitary = ac.callsign?.startsWith('MIL') || ac.category === 'military' ||
+        (['United States', 'Russia', 'China'].includes(ac.originCountry) && (ac.velocity || 0) > 280);
+
+      // Smooth position interpolation
+      const targetPos = latLngToVector3(ac.latitude, ac.longitude, 2.01 + (ac.altitude || 10000) / 1500000);
+      const prevPos = prevPositions.current.get(ac.icao24);
+      let pos: THREE.Vector3;
+      if (prevPos) {
+        pos = prevPos.clone().lerp(targetPos, Math.min(delta * 2, 1));
+      } else {
+        pos = targetPos;
+      }
+      prevPositions.current.set(ac.icao24, pos.clone());
+
+      const mesh = new THREE.Mesh(aircraftGeom, isMilitary ? milMat : civMat);
+      mesh.position.copy(pos);
+
+      // Orient to face away from globe center
+      mesh.lookAt(0, 0, 0);
+      mesh.rotateX(Math.PI); // flip to face outward
+
+      // Rotate by heading on the surface plane
+      if (ac.heading) {
+        mesh.rotateZ((-ac.heading * Math.PI) / 180);
+      }
+
+      mesh.scale.setScalar(isMilitary ? 0.012 : 0.008);
+      mesh.userData = { type: 'aircraft', data: ac };
+
+      groupRef.current!.add(mesh);
+      meshesRef.current.push(mesh);
+    });
   });
 
-  return (
-    <group>
-      {/* Civilian: diamond shape */}
-      {civilian.length > 0 && (
-        <instancedMesh ref={civRef} args={[undefined, undefined, civilian.length]}>
-          <octahedronGeometry args={[1, 0]} />
-          <meshBasicMaterial color="#38bdf8" transparent opacity={0.8} />
-        </instancedMesh>
-      )}
-      {/* Military: larger, red cone */}
-      {military.length > 0 && (
-        <instancedMesh ref={milRef} args={[undefined, undefined, military.length]}>
-          <coneGeometry args={[0.8, 2, 3]} />
-          <meshBasicMaterial color="#ef4444" transparent opacity={0.9} />
-        </instancedMesh>
-      )}
-    </group>
-  );
+  return <group ref={groupRef} />;
 }
 
 function SatelliteMarkers({ satellites }: { satellites: SatelliteData[] }) {
@@ -280,18 +302,10 @@ function SatelliteMarkers({ satellites }: { satellites: SatelliteData[] }) {
       const r = Math.min(alt, 4);
       for (let i = 0; i <= 64; i++) {
         const angle = (i / 64) * Math.PI * 2;
-        points.push(new THREE.Vector3(
-          r * Math.cos(angle),
-          r * Math.sin(angle) * 0.3,
-          r * Math.sin(angle)
-        ));
+        points.push(new THREE.Vector3(r * Math.cos(angle), r * Math.sin(angle) * 0.3, r * Math.sin(angle)));
       }
       const geom = new THREE.BufferGeometry().setFromPoints(points);
-      const mat = new THREE.LineBasicMaterial({ 
-        color: sat.category === 'military' ? '#ef4444' : '#6366f1', 
-        transparent: true, 
-        opacity: 0.12 
-      });
+      const mat = new THREE.LineBasicMaterial({ color: sat.category === 'military' ? '#ef4444' : '#6366f1', transparent: true, opacity: 0.12 });
       return new THREE.Line(geom, mat);
     });
   }, [satellites]);
@@ -305,69 +319,66 @@ function SatelliteMarkers({ satellites }: { satellites: SatelliteData[] }) {
         <meshBasicMaterial color="#818cf8" transparent opacity={0.7} />
       </instancedMesh>
       <group ref={orbitRef}>
-        {orbitLines.map((obj, i) => (
-          <primitive key={`orbit-${i}`} object={obj} />
-        ))}
+        {orbitLines.map((obj, i) => <primitive key={`orbit-${i}`} object={obj} />)}
       </group>
     </group>
   );
 }
 
-// Ships: wedge for civilian, larger pentagon for naval
+// Ships with hull shapes that move along heading in real-time
 function ShipMarkers({ ships }: { ships: ShipData[] }) {
-  const civRef = useRef<THREE.InstancedMesh>(null);
-  const navalRef = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const groupRef = useRef<THREE.Group>(null);
+  const prevPositions = useRef<Map<string, THREE.Vector3>>(new Map());
 
-  const { civilian: civShips, naval } = useMemo(() => {
-    const nav = ships.filter(s => s.type === 'naval');
-    const civ = ships.filter(s => s.type !== 'naval');
-    return { civilian: civ, naval: nav };
-  }, [ships]);
+  const shipGeom = useMemo(() => {
+    const shape = createShipShape();
+    return new THREE.ShapeGeometry(shape);
+  }, []);
 
-  useFrame(() => {
-    if (civRef.current && civShips.length > 0) {
-      civShips.forEach((ship, i) => {
-        const pos = latLngToVector3(ship.lat, ship.lng, 2.005);
-        dummy.position.copy(pos);
-        dummy.rotation.z = (ship.heading * Math.PI) / 180;
-        dummy.scale.setScalar(0.01);
-        dummy.updateMatrix();
-        civRef.current!.setMatrixAt(i, dummy.matrix);
-      });
-      civRef.current.instanceMatrix.needsUpdate = true;
+  const civMat = useMemo(() => new THREE.MeshBasicMaterial({ 
+    color: '#34d399', transparent: true, opacity: 0.8, side: THREE.DoubleSide 
+  }), []);
+  const navalMat = useMemo(() => new THREE.MeshBasicMaterial({ 
+    color: '#f87171', transparent: true, opacity: 0.9, side: THREE.DoubleSide 
+  }), []);
+  const tankerMat = useMemo(() => new THREE.MeshBasicMaterial({ 
+    color: '#fbbf24', transparent: true, opacity: 0.8, side: THREE.DoubleSide 
+  }), []);
+
+  useFrame((_, delta) => {
+    if (!groupRef.current) return;
+    while (groupRef.current.children.length > 0) {
+      groupRef.current.remove(groupRef.current.children[0]);
     }
-    if (navalRef.current && naval.length > 0) {
-      naval.forEach((ship, i) => {
-        const pos = latLngToVector3(ship.lat, ship.lng, 2.005);
-        dummy.position.copy(pos);
-        dummy.rotation.z = (ship.heading * Math.PI) / 180;
-        dummy.scale.setScalar(0.018);
-        dummy.updateMatrix();
-        navalRef.current!.setMatrixAt(i, dummy.matrix);
-      });
-      navalRef.current.instanceMatrix.needsUpdate = true;
-    }
+
+    ships.forEach((ship) => {
+      const targetPos = latLngToVector3(ship.lat, ship.lng, 2.005);
+      const prevPos = prevPositions.current.get(ship.id);
+      let pos: THREE.Vector3;
+      if (prevPos) {
+        pos = prevPos.clone().lerp(targetPos, Math.min(delta * 2, 1));
+      } else {
+        pos = targetPos;
+      }
+      prevPositions.current.set(ship.id, pos.clone());
+
+      let mat = civMat;
+      if (ship.type === 'naval') mat = navalMat;
+      else if (ship.type === 'tanker') mat = tankerMat;
+
+      const mesh = new THREE.Mesh(shipGeom, mat);
+      mesh.position.copy(pos);
+      mesh.lookAt(0, 0, 0);
+      mesh.rotateX(Math.PI);
+      mesh.rotateZ((-ship.heading * Math.PI) / 180);
+      mesh.scale.setScalar(ship.type === 'naval' ? 0.014 : 0.009);
+      mesh.userData = { type: 'ship', data: ship };
+
+      groupRef.current!.add(mesh);
+    });
   });
 
-  return (
-    <group>
-      {/* Civilian ships: small wedge */}
-      {civShips.length > 0 && (
-        <instancedMesh ref={civRef} args={[undefined, undefined, civShips.length]}>
-          <coneGeometry args={[0.6, 2, 4]} />
-          <meshBasicMaterial color="#34d399" transparent opacity={0.7} />
-        </instancedMesh>
-      )}
-      {/* Naval: red, larger */}
-      {naval.length > 0 && (
-        <instancedMesh ref={navalRef} args={[undefined, undefined, naval.length]}>
-          <coneGeometry args={[0.8, 2.5, 5]} />
-          <meshBasicMaterial color="#f87171" transparent opacity={0.9} />
-        </instancedMesh>
-      )}
-    </group>
-  );
+  return <group ref={groupRef} />;
 }
 
 function InfrastructureMarkers({ points }: { points: InfrastructurePoint[] }) {
@@ -397,15 +408,8 @@ function InfrastructureMarkers({ points }: { points: InfrastructurePoint[] }) {
 }
 
 export default function GlobeMarkers(props: Props) {
-  const earthquakePositions = useMemo(() =>
-    props.earthquakes.map(e => ({ lat: e.lat, lng: e.lng })),
-    [props.earthquakes]
-  );
-
-  const militaryPositions = useMemo(() =>
-    props.militaryEvents.map(e => ({ lat: e.lat, lng: e.lng })),
-    [props.militaryEvents]
-  );
+  const earthquakePositions = useMemo(() => props.earthquakes.map(e => ({ lat: e.lat, lng: e.lng })), [props.earthquakes]);
+  const militaryPositions = useMemo(() => props.militaryEvents.map(e => ({ lat: e.lat, lng: e.lng })), [props.militaryEvents]);
 
   return (
     <group>

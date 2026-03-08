@@ -1,37 +1,39 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Radio, Volume2, VolumeX, Search, Globe, MapPin, Signal, Wifi, Scan } from 'lucide-react';
+import { Radio, Volume2, VolumeX, Search, Scan, AlertCircle } from 'lucide-react';
 import { radioStations, type RadioStation } from '@/data/mockData';
 
 const typeColor: Record<string, string> = {
-  news: 'text-neon-cyan',
-  government: 'text-neon-amber',
-  music: 'text-neon-green',
-  emergency: 'text-neon-red',
-  aviation: 'text-neon-blue',
-  maritime: 'text-neon-cyan',
-  military: 'text-neon-red',
-  ham: 'text-neon-green',
+  news: 'text-primary',
+  government: 'text-accent-foreground',
+  music: 'text-primary',
+  emergency: 'text-destructive',
+  aviation: 'text-primary',
+  maritime: 'text-primary',
+  military: 'text-destructive',
+  ham: 'text-primary',
 };
 
-// Extended with scanner frequencies
+// Scanner frequencies with real working stream URLs where possible
 const scannerFrequencies: RadioStation[] = [
-  { id: 'scan-1', name: 'NYC ATC - JFK Approach', country: 'USA', region: 'Aviation', streamUrl: '', language: 'English', type: 'news', lat: 40.6, lng: -73.8 },
-  { id: 'scan-2', name: 'London Heathrow Tower', country: 'UK', region: 'Aviation', streamUrl: '', language: 'English', type: 'news', lat: 51.5, lng: -0.5 },
+  { id: 'scan-1', name: 'NYC ATC - JFK Approach', country: 'USA', region: 'Aviation', streamUrl: 'https://s1-bos.liveatc.net/kjfk_app_final', language: 'English', type: 'news', lat: 40.6, lng: -73.8 },
+  { id: 'scan-2', name: 'London Heathrow Tower', country: 'UK', region: 'Aviation', streamUrl: 'https://s1-bos.liveatc.net/egll2', language: 'English', type: 'news', lat: 51.5, lng: -0.5 },
   { id: 'scan-3', name: 'US Navy Atlantic Fleet', country: 'USA', region: 'Military', streamUrl: '', language: 'English', type: 'government', lat: 36.9, lng: -76.3 },
-  { id: 'scan-4', name: 'Coast Guard CH16', country: 'USA', region: 'Maritime', streamUrl: '', language: 'English', type: 'emergency', lat: 38.9, lng: -77.0 },
-  { id: 'scan-5', name: 'Tokyo ATC Approach', country: 'Japan', region: 'Aviation', streamUrl: '', language: 'Japanese', type: 'news', lat: 35.6, lng: 139.8 },
+  { id: 'scan-4', name: 'USCG Emergency CH16', country: 'USA', region: 'Maritime', streamUrl: '', language: 'English', type: 'emergency', lat: 38.9, lng: -77.0 },
+  { id: 'scan-5', name: 'Tokyo Narita Tower', country: 'Japan', region: 'Aviation', streamUrl: 'https://s1-bos.liveatc.net/rjaa_app_dep', language: 'Japanese', type: 'news', lat: 35.6, lng: 139.8 },
   { id: 'scan-6', name: 'ISS Downlink 145.800 MHz', country: 'Space', region: 'Satellite', streamUrl: '', language: 'English', type: 'government', lat: 0, lng: 0 },
-  { id: 'scan-7', name: 'NOAA Weather Sat APT', country: 'USA', region: 'Satellite', streamUrl: '', language: 'Data', type: 'news', lat: 0, lng: 0 },
+  { id: 'scan-7', name: 'NOAA Weather Radio', country: 'USA', region: 'Satellite', streamUrl: 'https://radio.weatherusa.net/NWR/WXJ72.mp3', language: 'English', type: 'news', lat: 0, lng: 0 },
   { id: 'scan-8', name: 'Amateur 14.300 MHz Net', country: 'Global', region: 'Ham Radio', streamUrl: '', language: 'English', type: 'news', lat: 0, lng: 0 },
-  { id: 'scan-9', name: 'Moscow ATC Center', country: 'Russia', region: 'Aviation', streamUrl: '', language: 'Russian', type: 'news', lat: 55.8, lng: 37.6 },
+  { id: 'scan-9', name: 'Moscow SVO Approach', country: 'Russia', region: 'Aviation', streamUrl: '', language: 'Russian', type: 'news', lat: 55.8, lng: 37.6 },
   { id: 'scan-10', name: 'Dubai Approach 124.9', country: 'UAE', region: 'Aviation', streamUrl: '', language: 'English', type: 'news', lat: 25.3, lng: 55.4 },
   { id: 'scan-11', name: 'Port of Shanghai VHF', country: 'China', region: 'Maritime', streamUrl: '', language: 'Mandarin', type: 'news', lat: 30.6, lng: 122.1 },
   { id: 'scan-12', name: 'RAF Lakenheath Ground', country: 'UK', region: 'Military', streamUrl: '', language: 'English', type: 'government', lat: 52.4, lng: 0.6 },
+  { id: 'scan-13', name: 'Chicago ARTCC', country: 'USA', region: 'Aviation', streamUrl: 'https://s1-bos.liveatc.net/kord_app_o', language: 'English', type: 'news', lat: 41.9, lng: -87.9 },
+  { id: 'scan-14', name: 'LAX Tower', country: 'USA', region: 'Aviation', streamUrl: 'https://s1-bos.liveatc.net/klax_twr', language: 'English', type: 'news', lat: 33.9, lng: -118.4 },
 ];
 
 const allStations = [...radioStations, ...scannerFrequencies];
-const regionGroups: Record<string, (RadioStation)[]> = {};
+const regionGroups: Record<string, RadioStation[]> = {};
 allStations.forEach(s => {
   if (!regionGroups[s.region]) regionGroups[s.region] = [];
   regionGroups[s.region].push(s);
@@ -44,10 +46,11 @@ export default function RadioScanner() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [scanFreq, setScanFreq] = useState(88.0);
+  const [audioError, setAudioError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const regions = ['all', ...Object.keys(regionGroups)];
-  
+
   let filtered = selectedRegion === 'all' ? allStations : (regionGroups[selectedRegion] || []);
   if (searchTerm) {
     const term = searchTerm.toLowerCase();
@@ -67,7 +70,6 @@ export default function RadioScanner() {
     };
   }, []);
 
-  // Scanning animation
   useEffect(() => {
     if (!isScanning) return;
     const interval = setInterval(() => {
@@ -80,43 +82,77 @@ export default function RadioScanner() {
   }, [isScanning]);
 
   const playStation = (station: RadioStation) => {
+    setAudioError(null);
+
+    // Stop current audio
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
+
+    // Toggle off if same station
     if (selectedStation?.id === station.id && isPlaying) {
       setIsPlaying(false);
       setSelectedStation(null);
       return;
     }
+
     setSelectedStation(station);
-    if (station.streamUrl) {
-      const audio = new Audio(station.streamUrl);
-      audio.crossOrigin = 'anonymous';
-      audioRef.current = audio;
-      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
-      audio.onerror = () => setIsPlaying(false);
-    } else {
+
+    if (!station.streamUrl) {
       setIsPlaying(false);
+      setAudioError('This frequency is metadata-only. No live stream available for this channel.');
+      return;
     }
+
+    // Create and play audio immediately in user gesture context
+    const audio = new Audio();
+    audio.preload = 'auto';
+    audioRef.current = audio;
+
+    // Unlock audio context first
+    audio.play().catch(() => {});
+    audio.pause();
+
+    // Now set source and play
+    audio.src = station.streamUrl;
+    audio.crossOrigin = 'anonymous';
+
+    audio.play()
+      .then(() => {
+        setIsPlaying(true);
+        setAudioError(null);
+      })
+      .catch((err) => {
+        console.error('Audio play error:', err);
+        setIsPlaying(false);
+        setAudioError('Stream unavailable or blocked by browser. Try another station.');
+      });
+
+    audio.onerror = () => {
+      setIsPlaying(false);
+      setAudioError('Stream connection failed. The station may be offline.');
+    };
   };
+
+  const hasStream = (station: RadioStation) => !!station.streamUrl;
 
   return (
     <div className="panel h-full flex flex-col">
       <div className="panel-header">
-        <Radio className="w-3.5 h-3.5 text-neon-cyan" />
+        <Radio className="w-3.5 h-3.5 text-primary" />
         Global Radio Scanner
         <div className="ml-auto flex items-center gap-2">
           {isPlaying && selectedStation && (
-            <span className="flex items-center gap-1 text-[9px] text-neon-green font-mono">
-              <Volume2 className="w-3 h-3" />
+            <span className="flex items-center gap-1 text-[9px] text-primary font-mono">
+              <Volume2 className="w-3 h-3 animate-pulse" />
               LIVE
             </span>
           )}
           <button
             onClick={() => setIsScanning(!isScanning)}
             className={`flex items-center gap-1 text-[8px] font-mono px-1.5 py-0.5 rounded transition-colors ${
-              isScanning ? 'bg-neon-cyan/20 text-neon-cyan' : 'text-muted-foreground hover:text-foreground'
+              isScanning ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Scan className="w-2.5 h-2.5" />
@@ -125,23 +161,21 @@ export default function RadioScanner() {
         </div>
       </div>
 
-      {/* Scanner bar */}
       {isScanning && (
         <div className="px-2 py-1.5 border-b border-border bg-muted/20">
           <div className="flex items-center gap-2">
-            <Signal className="w-3 h-3 text-neon-cyan animate-pulse" />
+            <Radio className="w-3 h-3 text-primary animate-pulse" />
             <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden relative">
               <div
-                className="absolute h-full w-1 bg-neon-cyan rounded-full transition-all"
+                className="absolute h-full w-1 bg-primary rounded-full transition-all"
                 style={{ left: `${((scanFreq - 88) / (174 - 88)) * 100}%` }}
               />
             </div>
-            <span className="text-[9px] font-mono text-neon-cyan w-16 text-right">{scanFreq.toFixed(1)} MHz</span>
+            <span className="text-[9px] font-mono text-primary w-16 text-right">{scanFreq.toFixed(1)} MHz</span>
           </div>
         </div>
       )}
 
-      {/* Search */}
       <div className="px-2 py-1.5 border-b border-border">
         <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30 border border-border/50">
           <Search className="w-3 h-3 text-muted-foreground" />
@@ -155,7 +189,6 @@ export default function RadioScanner() {
         </div>
       </div>
 
-      {/* Region filter */}
       <div className="flex gap-0.5 px-2 py-1 border-b border-border overflow-x-auto">
         {regions.map(r => (
           <button
@@ -170,12 +203,12 @@ export default function RadioScanner() {
         ))}
       </div>
 
-      {/* Now playing */}
+      {/* Now playing / error */}
       {selectedStation && (
         <div className="px-2.5 py-2 border-b border-border bg-primary/5">
           <div className="flex items-center gap-2">
             {isPlaying ? (
-              <Volume2 className="w-3.5 h-3.5 text-neon-green shrink-0" />
+              <Volume2 className="w-3.5 h-3.5 text-primary shrink-0 animate-pulse" />
             ) : (
               <VolumeX className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
             )}
@@ -184,6 +217,12 @@ export default function RadioScanner() {
               <p className="text-[9px] text-muted-foreground">{selectedStation.country} · {selectedStation.language}</p>
             </div>
           </div>
+          {audioError && (
+            <div className="flex items-center gap-1.5 mt-1.5 text-[9px] text-destructive">
+              <AlertCircle className="w-3 h-3 shrink-0" />
+              <span>{audioError}</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -198,22 +237,25 @@ export default function RadioScanner() {
             onClick={() => playStation(station)}
             className={`px-2.5 py-1.5 border-b border-border cursor-pointer transition-colors ${
               selectedStation?.id === station.id ? 'bg-primary/10 border-l-2 border-l-primary' : 'hover:bg-muted/30'
-            }`}
+            } ${!hasStream(station) ? 'opacity-60' : ''}`}
           >
             <div className="flex items-center gap-2">
-              <Radio className={`w-3 h-3 shrink-0 ${selectedStation?.id === station.id && isPlaying ? 'text-neon-green' : 'text-muted-foreground'}`} />
+              <Radio className={`w-3 h-3 shrink-0 ${selectedStation?.id === station.id && isPlaying ? 'text-primary' : 'text-muted-foreground'}`} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] font-medium text-foreground truncate">{station.name}</span>
                   <span className={`text-[8px] font-mono uppercase ${typeColor[station.type] || 'text-muted-foreground'}`}>
                     {station.type}
                   </span>
+                  {hasStream(station) && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
+                  )}
                 </div>
                 <div className="flex items-center gap-2 mt-0.5 text-[9px] text-muted-foreground">
                   <span>{station.country}</span>
                   <span>·</span>
                   <span>{station.language}</span>
-                  {!station.streamUrl && <span className="text-[8px] text-muted-foreground/50">(metadata only)</span>}
+                  {!hasStream(station) && <span className="text-[8px] text-muted-foreground/50 italic">no stream</span>}
                 </div>
               </div>
             </div>

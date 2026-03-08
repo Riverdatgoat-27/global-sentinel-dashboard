@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import ThreatStatusBar from '@/components/dashboard/ThreatStatusBar';
 import EventFeed from '@/components/dashboard/EventFeed';
 import CyberAttackMonitor from '@/components/dashboard/CyberAttackMonitor';
@@ -17,6 +17,8 @@ import LiveInfoTicker from '@/components/dashboard/LiveInfoTicker';
 import CCTVViewer from '@/components/dashboard/CCTVViewer';
 import WarPanel from '@/components/dashboard/WarPanel';
 import NewsFeedPanel from '@/components/dashboard/NewsFeedPanel';
+import NuclearPanel from '@/components/dashboard/NuclearPanel';
+import EconomicsPanel from '@/components/dashboard/EconomicsPanel';
 import IntelGlobe, { type GlobeControlHandle } from '@/components/globe/IntelGlobe';
 import { useEarthquakeData } from '@/hooks/useEarthquakeData';
 import { useAircraftData } from '@/hooks/useAircraftData';
@@ -24,52 +26,72 @@ import { useSimulatedData } from '@/hooks/useSimulatedData';
 import { useGDELTData } from '@/hooks/useGDELTData';
 import { useRealTimeNews } from '@/hooks/useRealTimeNews';
 import { infrastructurePoints, cctvCameras } from '@/data/mockData';
-import type { LayerVisibility, CCTVCamera } from '@/types/intelligence';
+import type { LayerVisibility, CCTVCamera, AlertNotification } from '@/types/intelligence';
 
 const REGION_COORDS: Record<string, { lat: number; lng: number }> = {
-  europe: { lat: 50, lng: 10 },
-  asia: { lat: 35, lng: 105 },
-  americas: { lat: 20, lng: -90 },
-  africa: { lat: 5, lng: 25 },
-  middle_east: { lat: 28, lng: 45 },
-  pacific: { lat: -10, lng: 170 },
-  russia: { lat: 55, lng: 37 },
-  china: { lat: 35, lng: 105 },
-  india: { lat: 20, lng: 79 },
-  japan: { lat: 36, lng: 138 },
-  australia: { lat: -25, lng: 134 },
-  iran: { lat: 32, lng: 53 },
-  ukraine: { lat: 48, lng: 31 },
-  israel: { lat: 31, lng: 35 },
-  north_korea: { lat: 40, lng: 127 },
-  south_korea: { lat: 36, lng: 128 },
-  taiwan: { lat: 24, lng: 121 },
+  europe: { lat: 50, lng: 10 }, asia: { lat: 35, lng: 105 }, americas: { lat: 20, lng: -90 },
+  africa: { lat: 5, lng: 25 }, middle_east: { lat: 28, lng: 45 }, pacific: { lat: -10, lng: 170 },
+  russia: { lat: 55, lng: 37 }, china: { lat: 35, lng: 105 }, india: { lat: 20, lng: 79 },
+  japan: { lat: 36, lng: 138 }, australia: { lat: -25, lng: 134 }, iran: { lat: 32, lng: 53 },
+  ukraine: { lat: 48, lng: 31 }, israel: { lat: 31, lng: 35 }, north_korea: { lat: 40, lng: 127 },
+  south_korea: { lat: 36, lng: 128 }, taiwan: { lat: 24, lng: 121 },
 };
+
+// Siren audio context
+let sirenCtx: AudioContext | null = null;
+function playSiren() {
+  try {
+    if (!sirenCtx) sirenCtx = new AudioContext();
+    const osc = sirenCtx.createOscillator();
+    const gain = sirenCtx.createGain();
+    osc.connect(gain);
+    gain.connect(sirenCtx.destination);
+    osc.type = 'sawtooth';
+    gain.gain.setValueAtTime(0.15, sirenCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, sirenCtx.currentTime + 2);
+    // Siren sweep
+    osc.frequency.setValueAtTime(400, sirenCtx.currentTime);
+    osc.frequency.linearRampToValueAtTime(800, sirenCtx.currentTime + 0.5);
+    osc.frequency.linearRampToValueAtTime(400, sirenCtx.currentTime + 1);
+    osc.frequency.linearRampToValueAtTime(800, sirenCtx.currentTime + 1.5);
+    osc.frequency.linearRampToValueAtTime(400, sirenCtx.currentTime + 2);
+    osc.start(sirenCtx.currentTime);
+    osc.stop(sirenCtx.currentTime + 2);
+  } catch { /* audio not available */ }
+}
 
 const Index = () => {
   const { earthquakes } = useEarthquakeData();
   const { aircraft } = useAircraftData();
-  const { satellites, ships, marineAnimals, cyberThreats, militaryEvents, missiles, alerts, acknowledgeAlert } = useSimulatedData();
+  const { satellites, ships, submarines, marineAnimals, cyberThreats, militaryEvents, missiles, alerts, acknowledgeAlert } = useSimulatedData();
   const { events: gdeltEvents } = useGDELTData();
   const { news, conflicts, loading: newsLoading, refetch: refetchNews } = useRealTimeNews();
   const globeRef = useRef<GlobeControlHandle>(null);
+  const prevAlertCount = useRef(0);
 
   const [layers, setLayers] = useState<LayerVisibility>({
-    earthquakes: true,
-    cyberAttacks: true,
-    military: true,
-    aircraft: true,
-    satellites: true,
-    ships: true,
-    infrastructure: false,
-    missiles: true,
-    marineAnimals: true,
+    earthquakes: true, cyberAttacks: true, military: true, aircraft: true,
+    satellites: true, ships: true, submarines: true, infrastructure: false,
+    missiles: true, marineAnimals: true,
   });
 
-  const [bottomTab, setBottomTab] = useState<'financial' | 'cctv' | 'video' | 'radio'>('financial');
+  const [bottomTab, setBottomTab] = useState<'financial' | 'cctv' | 'video' | 'radio' | 'nuclear' | 'economics'>('financial');
   const [leftTab, setLeftTab] = useState<'intel' | 'wars' | 'news'>('intel');
   const [selectedAsset, setSelectedAsset] = useState<SelectedAsset>(null);
   const [selectedCamera, setSelectedCamera] = useState<CCTVCamera | null>(null);
+  const [sirenAlert, setSirenAlert] = useState<AlertNotification | null>(null);
+
+  // Siren for new critical alerts
+  useEffect(() => {
+    const criticals = alerts.filter(a => a.severity === 'critical' && !a.acknowledged);
+    if (criticals.length > prevAlertCount.current && prevAlertCount.current > 0) {
+      const newest = criticals[0];
+      playSiren();
+      setSirenAlert(newest);
+      setTimeout(() => setSirenAlert(null), 8000);
+    }
+    prevAlertCount.current = criticals.length;
+  }, [alerts]);
 
   const toggleLayer = useCallback((layer: keyof LayerVisibility) => {
     setLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
@@ -86,55 +108,34 @@ const Index = () => {
     globeRef.current?.navigateTo(camera.lat, camera.lng, 7);
   }, []);
 
-  // Handle Cortana AI actions
   const handleCortanaAction = useCallback((action: CortanaAction) => {
     switch (action.action) {
       case 'navigate_globe':
-        if (action.lat !== undefined && action.lng !== undefined) {
-          globeRef.current?.navigateTo(action.lat, action.lng, action.zoom);
-        }
+        if (action.lat !== undefined && action.lng !== undefined) globeRef.current?.navigateTo(action.lat, action.lng, action.zoom);
         break;
       case 'show_panel':
-        if (action.panel === 'financial' || action.panel === 'cctv' || action.panel === 'video' || action.panel === 'radio') {
-          setBottomTab(action.panel);
-        }
+        if (['financial', 'cctv', 'video', 'radio', 'nuclear', 'economics'].includes(action.panel || ''))
+          setBottomTab(action.panel as any);
         break;
       case 'select_asset': {
         const query = (action.query || '').toLowerCase();
         if (action.type === 'aircraft') {
           const found = aircraft.find(a => a.callsign?.toLowerCase().includes(query) || a.icao24.toLowerCase().includes(query));
-          if (found) {
-            setSelectedAsset({ type: 'aircraft', data: found });
-            if (found.latitude && found.longitude) globeRef.current?.navigateTo(found.latitude, found.longitude, 6);
-          }
+          if (found) { setSelectedAsset({ type: 'aircraft', data: found }); if (found.latitude && found.longitude) globeRef.current?.navigateTo(found.latitude, found.longitude, 6); }
         } else if (action.type === 'ship') {
           const found = ships.find(s => s.name.toLowerCase().includes(query));
-          if (found) {
-            setSelectedAsset({ type: 'ship', data: found });
-            globeRef.current?.navigateTo(found.lat, found.lng, 6);
-          }
+          if (found) { setSelectedAsset({ type: 'ship', data: found }); globeRef.current?.navigateTo(found.lat, found.lng, 6); }
         } else if (action.type === 'satellite') {
           const found = satellites.find(s => s.name.toLowerCase().includes(query));
-          if (found) {
-            setSelectedAsset({ type: 'satellite', data: found });
-            globeRef.current?.navigateTo(found.lat, found.lng, 5);
-          }
+          if (found) { setSelectedAsset({ type: 'satellite', data: found }); globeRef.current?.navigateTo(found.lat, found.lng, 5); }
         }
         break;
       }
       case 'toggle_layer':
-        if (action.layer && action.layer in layers) {
-          setLayers(prev => ({ ...prev, [action.layer!]: action.visible ?? !prev[action.layer as keyof LayerVisibility] }));
-        }
+        if (action.layer && action.layer in layers) setLayers(prev => ({ ...prev, [action.layer!]: action.visible ?? !prev[action.layer as keyof LayerVisibility] }));
         break;
-      case 'show_alerts':
-        break;
-      case 'zoom_in':
-        globeRef.current?.zoomIn();
-        break;
-      case 'zoom_out':
-        globeRef.current?.zoomOut();
-        break;
+      case 'zoom_in': globeRef.current?.zoomIn(); break;
+      case 'zoom_out': globeRef.current?.zoomOut(); break;
       case 'rotate_to': {
         const region = (action.region || '').toLowerCase().replace(/\s+/g, '_');
         const coords = REGION_COORDS[region];
@@ -145,19 +146,15 @@ const Index = () => {
   }, [aircraft, ships, satellites, layers]);
 
   const getContext = useCallback(() => {
-    return `Layers: ${Object.entries(layers).filter(([,v]) => v).map(([k]) => k).join(', ')}. Bottom panel: ${bottomTab}. Aircraft: ${aircraft.length}, Ships: ${ships.length}, Satellites: ${satellites.length}, Threats: ${cyberThreats.length}`;
-  }, [layers, bottomTab, aircraft, ships, satellites, cyberThreats]);
+    return `Layers: ${Object.entries(layers).filter(([,v]) => v).map(([k]) => k).join(', ')}. Bottom panel: ${bottomTab}. Aircraft: ${aircraft.length}, Ships: ${ships.length}, Submarines: ${submarines.length}, Satellites: ${satellites.length}, Threats: ${cyberThreats.length}`;
+  }, [layers, bottomTab, aircraft, ships, submarines, satellites, cyberThreats]);
 
   const counts = {
-    earthquakes: earthquakes.length,
-    cyberAttacks: cyberThreats.length,
+    earthquakes: earthquakes.length, cyberAttacks: cyberThreats.length,
     military: militaryEvents.length + gdeltEvents.filter(e => e.type === 'military').length,
-    aircraft: aircraft.length,
-    satellites: satellites.length,
-    ships: ships.length,
-    missiles: missiles.length,
-    infrastructure: infrastructurePoints.length,
-    marineAnimals: marineAnimals.length,
+    aircraft: aircraft.length, satellites: satellites.length, ships: ships.length,
+    submarines: submarines.length, missiles: missiles.length,
+    infrastructure: infrastructurePoints.length, marineAnimals: marineAnimals.length,
   };
 
   const allGlobeEvents = [...earthquakes, ...militaryEvents, ...gdeltEvents];
@@ -166,19 +163,25 @@ const Index = () => {
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-background">
       <ThreatStatusBar />
 
+      {/* Siren Alert Banner */}
+      {sirenAlert && (
+        <div className="bg-destructive/90 text-destructive-foreground px-4 py-1.5 flex items-center gap-2 animate-pulse z-50">
+          <span className="text-lg">🚨</span>
+          <span className="text-[11px] font-mono font-bold uppercase tracking-wider flex-1">{sirenAlert.title}</span>
+          <button onClick={() => setSirenAlert(null)} className="text-[10px] font-mono px-2 py-0.5 rounded border border-destructive-foreground/30 hover:bg-destructive-foreground/10">DISMISS</button>
+        </div>
+      )}
+
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel */}
         <div className="w-60 shrink-0 border-r border-border flex flex-col">
           <div className="flex-1 overflow-hidden flex flex-col">
             <div className="flex border-b border-border bg-card/50">
               {(['intel', 'wars', 'news'] as const).map(t => (
-                <button
-                  key={t}
-                  onClick={() => setLeftTab(t)}
+                <button key={t} onClick={() => setLeftTab(t)}
                   className={`flex-1 px-2 py-1 text-[8px] font-mono tracking-wider uppercase transition-all ${
                     leftTab === t ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
+                  }`}>
                   {t === 'intel' ? '📡 INTEL' : t === 'wars' ? '⚔️ WARS' : '📰 NEWS'}
                 </button>
               ))}
@@ -207,6 +210,7 @@ const Index = () => {
               aircraft={aircraft}
               satellites={satellites}
               ships={ships}
+              submarines={submarines}
               missiles={missiles}
               infrastructure={infrastructurePoints}
               marineAnimals={marineAnimals}
@@ -216,24 +220,20 @@ const Index = () => {
               onSelectCamera={handleCameraSelect}
             />
             <AssetDetailPanel asset={selectedAsset} onClose={() => setSelectedAsset(null)} />
-
-            {/* CCTV Viewer overlay */}
-            {selectedCamera && (
-              <CCTVViewer camera={selectedCamera} onClose={() => setSelectedCamera(null)} />
-            )}
+            {selectedCamera && <CCTVViewer camera={selectedCamera} onClose={() => setSelectedCamera(null)} />}
 
             {/* Stats bar */}
-            <div className="absolute bottom-2 left-2 right-2 flex gap-1.5 z-10">
+            <div className="absolute bottom-2 left-2 right-2 flex gap-1.5 z-10 flex-wrap">
               {[
                 { label: 'FEEDS', value: Object.values(counts).reduce((a, b) => a + b, 0), color: 'text-foreground' },
                 { label: 'USGS', value: earthquakes.length, color: 'text-neon-amber' },
                 { label: 'AIRCRAFT', value: aircraft.length, color: 'text-neon-cyan' },
-                { label: 'GDELT', value: gdeltEvents.length, color: 'text-primary' },
+                { label: 'SHIPS', value: ships.length, color: 'text-neon-cyan' },
+                { label: 'SUBS', value: submarines.length, color: 'text-neon-red' },
                 { label: 'MISSILES', value: missiles.length, color: 'text-neon-red' },
                 { label: 'THREATS', value: cyberThreats.length, color: 'text-neon-amber' },
-                { label: 'CCTV', value: cctvCameras.length, color: 'text-neon-green' },
-                { label: 'NEWS', value: news.length, color: 'text-primary' },
                 { label: 'WARS', value: conflicts.length, color: 'text-neon-red' },
+                { label: 'NEWS', value: news.length, color: 'text-primary' },
               ].map(stat => (
                 <div key={stat.label} className="bg-card/80 backdrop-blur-sm border border-border/50 px-2 py-1 rounded text-[8px] flex items-center gap-1.5">
                   <span className="text-muted-foreground font-mono">{stat.label}</span>
@@ -247,18 +247,20 @@ const Index = () => {
 
           {/* Bottom panels */}
           <div className="h-44 shrink-0 flex flex-col border-t border-border">
-            <div className="flex border-b border-border bg-card/50">
-              {(['financial', 'cctv', 'video', 'radio'] as const).map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setBottomTab(tab)}
-                  className={`px-3 py-1.5 text-[9px] font-mono tracking-wider uppercase transition-all ${
-                    bottomTab === tab
-                      ? 'text-primary border-b-2 border-primary bg-primary/5'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/20'
-                  }`}
-                >
-                  {tab === 'financial' ? 'MARKETS' : tab === 'cctv' ? '📹 CCTV' : tab === 'video' ? 'INTEL' : '📡 SCANNER'}
+            <div className="flex border-b border-border bg-card/50 overflow-x-auto">
+              {([
+                { key: 'financial', label: '💰 MARKETS' },
+                { key: 'cctv', label: '📹 CCTV' },
+                { key: 'video', label: '📺 INTEL' },
+                { key: 'radio', label: '📡 SCANNER' },
+                { key: 'nuclear', label: '☢️ NUCLEAR' },
+                { key: 'economics', label: '📊 ECON' },
+              ] as const).map(tab => (
+                <button key={tab.key} onClick={() => setBottomTab(tab.key)}
+                  className={`px-3 py-1.5 text-[9px] font-mono tracking-wider uppercase transition-all whitespace-nowrap ${
+                    bottomTab === tab.key ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-muted-foreground hover:text-foreground hover:bg-muted/20'
+                  }`}>
+                  {tab.label}
                 </button>
               ))}
             </div>
@@ -268,6 +270,8 @@ const Index = () => {
                 {bottomTab === 'cctv' && <CCTVPanel />}
                 {bottomTab === 'video' && <VideoIntelPanel gdeltEvents={gdeltEvents} />}
                 {bottomTab === 'radio' && <RadioScanner />}
+                {bottomTab === 'nuclear' && <NuclearPanel />}
+                {bottomTab === 'economics' && <EconomicsPanel />}
               </div>
               <div className="flex-1 border-l border-border">
                 <AIAnalysisPanel events={allGlobeEvents} cyberThreats={cyberThreats} />
@@ -294,7 +298,6 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Cortana AI Voice Assistant */}
       <NexusAI
         alerts={alerts}
         onCommand={handleAICommand}

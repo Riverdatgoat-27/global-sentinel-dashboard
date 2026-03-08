@@ -53,11 +53,8 @@ function createTextSprite(text: string, size: 'large' | 'medium' | 'small'): THR
 export default function EarthMesh() {
   const groupRef = useRef<THREE.Group>(null);
 
-  useFrame((_, delta) => {
-    if (groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.02;
-    }
-  });
+  // Globe rotation handled by OrbitControls autoRotate - no self-rotation here
+  // This keeps landmass synced with markers
 
   const gridLines = useMemo(() => {
     const lines: { points: THREE.Vector3[] }[] = [];

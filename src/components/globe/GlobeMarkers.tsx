@@ -1,7 +1,7 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { GlobeEvent, CyberThreat, AircraftState, SatelliteData, ShipData, MissileEvent, InfrastructurePoint, MarineAnimal, CCTVCamera } from '@/types/intelligence';
+import type { GlobeEvent, CyberThreat, AircraftState, SatelliteData, ShipData, MissileEvent, InfrastructurePoint, MarineAnimal, CCTVCamera, SubmarineData } from '@/types/intelligence';
 
 interface Props {
   earthquakes: GlobeEvent[];
@@ -10,6 +10,7 @@ interface Props {
   aircraft: AircraftState[];
   satellites: SatelliteData[];
   ships: ShipData[];
+  submarines?: SubmarineData[];
   missiles?: MissileEvent[];
   infrastructure?: InfrastructurePoint[];
   marineAnimals?: MarineAnimal[];
@@ -21,6 +22,7 @@ interface Props {
     aircraft: boolean;
     satellites: boolean;
     ships: boolean;
+    submarines: boolean;
     infrastructure: boolean;
     missiles: boolean;
     marineAnimals: boolean;
@@ -436,6 +438,40 @@ function CCTVMarkers({ cameras }: { cameras: CCTVCamera[] }) {
   return <group ref={groupRef} />;
 }
 
+// Submarine markers 🔱
+function SubmarineMarkers({ submarines }: { submarines: SubmarineData[] }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const prevPositions = useRef<Map<string, THREE.Vector3>>(new Map());
+
+  useFrame((_, delta) => {
+    if (!groupRef.current) return;
+    while (groupRef.current.children.length > 0) {
+      groupRef.current.remove(groupRef.current.children[0]);
+    }
+
+    submarines.forEach((sub) => {
+      const targetPos = latLngToVector3(sub.lat, sub.lng, 2.002);
+      const prevPos = prevPositions.current.get(sub.id);
+      let pos: THREE.Vector3;
+      if (prevPos) {
+        pos = prevPos.clone().lerp(targetPos, Math.min(delta * 2, 1));
+      } else {
+        pos = targetPos;
+      }
+      prevPositions.current.set(sub.id, pos.clone());
+
+      const emoji = sub.type === 'ballistic' ? '🔱' : sub.type === 'attack' ? '🦈' : '🔱';
+      const scale = sub.type === 'ballistic' ? 0.05 : 0.04;
+      const sprite = createEmojiSprite(emoji, scale);
+      sprite.position.copy(pos);
+      sprite.userData = { type: 'submarine', data: sub };
+      groupRef.current!.add(sprite);
+    });
+  });
+
+  return <group ref={groupRef} />;
+}
+
 export default function GlobeMarkers(props: Props) {
   const earthquakePositions = useMemo(() => props.earthquakes.map(e => ({ lat: e.lat, lng: e.lng })), [props.earthquakes]);
   const militaryPositions = useMemo(() => props.militaryEvents.map(e => ({ lat: e.lat, lng: e.lng })), [props.militaryEvents]);
@@ -448,6 +484,7 @@ export default function GlobeMarkers(props: Props) {
       {props.layers.aircraft && <AircraftMarkers aircraft={props.aircraft} />}
       {props.layers.satellites && <SatelliteMarkers satellites={props.satellites} />}
       {props.layers.ships && <ShipMarkers ships={props.ships} />}
+      {props.layers.submarines && props.submarines && <SubmarineMarkers submarines={props.submarines} />}
       {props.layers.missiles && props.missiles && <MissileArcs missiles={props.missiles} />}
       {props.layers.infrastructure && props.infrastructure && <InfrastructureMarkers points={props.infrastructure} />}
       {props.layers.marineAnimals && props.marineAnimals && <MarineAnimalMarkers animals={props.marineAnimals} />}

@@ -1,9 +1,11 @@
-import { Suspense } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Suspense, useCallback, useRef } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
+import * as THREE from 'three';
 import EarthMesh from './EarthMesh';
 import GlobeMarkers from './GlobeMarkers';
 import type { GlobeEvent, CyberThreat, AircraftState, SatelliteData, ShipData, LayerVisibility, MissileEvent, InfrastructurePoint } from '@/types/intelligence';
+import type { SelectedAsset } from '@/components/dashboard/AssetDetailPanel';
 
 interface Props {
   earthquakes: GlobeEvent[];
@@ -16,6 +18,88 @@ interface Props {
   infrastructure: InfrastructurePoint[];
   layers: LayerVisibility;
   onSelectEvent?: (event: GlobeEvent | null) => void;
+  onSelectAsset?: (asset: SelectedAsset) => void;
+}
+
+function ClickHandler({ aircraft, ships, satellites, cyberThreats, onSelectAsset }: {
+  aircraft: AircraftState[];
+  ships: ShipData[];
+  satellites: SatelliteData[];
+  cyberThreats: CyberThreat[];
+  onSelectAsset?: (asset: SelectedAsset) => void;
+}) {
+  const { camera, gl } = useThree();
+  const raycaster = useRef(new THREE.Raycaster());
+
+  const handleClick = useCallback((event: MouseEvent) => {
+    if (!onSelectAsset) return;
+
+    const rect = gl.domElement.getBoundingClientRect();
+    const mouse = new THREE.Vector2(
+      ((event.clientX - rect.left) / rect.width) * 2 - 1,
+      -((event.clientY - rect.top) / rect.height) * 2 + 1
+    );
+
+    raycaster.current.setFromCamera(mouse, camera);
+    const intersects = raycaster.current.intersectObjects(gl.domElement.parentElement ? [] : [], true);
+
+    // Convert click to lat/lng on globe surface
+    const direction = new THREE.Vector3();
+    raycaster.current.ray.direction.normalize();
+    const origin = raycaster.current.ray.origin;
+    const dir = raycaster.current.ray.direction;
+
+    // Ray-sphere intersection for radius 2.01
+    const r = 2.01;
+    const a = dir.dot(dir);
+    const b = 2 * origin.dot(dir);
+    const c = origin.dot(origin) - r * r;
+    const discriminant = b * b - 4 * a * c;
+
+    if (discriminant < 0) return;
+
+    const t = (-b - Math.sqrt(discriminant)) / (2 * a);
+    if (t < 0) return;
+
+    const hitPoint = origin.clone().add(dir.clone().multiplyScalar(t));
+    const lat = 90 - Math.acos(hitPoint.y / r) * (180 / Math.PI);
+    const lng = Math.atan2(hitPoint.z, -hitPoint.x) * (180 / Math.PI) - 180;
+    const normLng = ((lng + 540) % 360) - 180;
+
+    // Find nearest asset to click
+    let bestDist = 5; // Max selection distance in degrees
+    let bestAsset: SelectedAsset = null;
+
+    aircraft.forEach(ac => {
+      if (!ac.latitude || !ac.longitude) return;
+      const d = Math.sqrt(Math.pow(ac.latitude - lat, 2) + Math.pow(ac.longitude - normLng, 2));
+      if (d < bestDist) { bestDist = d; bestAsset = { type: 'aircraft', data: ac }; }
+    });
+
+    ships.forEach(ship => {
+      const d = Math.sqrt(Math.pow(ship.lat - lat, 2) + Math.pow(ship.lng - normLng, 2));
+      if (d < bestDist) { bestDist = d; bestAsset = { type: 'ship', data: ship }; }
+    });
+
+    satellites.forEach(sat => {
+      const d = Math.sqrt(Math.pow(sat.lat - lat, 2) + Math.pow(sat.lng - normLng, 2));
+      if (d < bestDist) { bestDist = d; bestAsset = { type: 'satellite', data: sat }; }
+    });
+
+    cyberThreats.forEach(ct => {
+      const dSource = Math.sqrt(Math.pow(ct.sourceLat - lat, 2) + Math.pow(ct.sourceLng - normLng, 2));
+      const dTarget = Math.sqrt(Math.pow(ct.targetLat - lat, 2) + Math.pow(ct.targetLng - normLng, 2));
+      const d = Math.min(dSource, dTarget);
+      if (d < bestDist) { bestDist = d; bestAsset = { type: 'cyber', data: ct }; }
+    });
+
+    onSelectAsset(bestAsset);
+  }, [aircraft, ships, satellites, cyberThreats, camera, gl, onSelectAsset]);
+
+  // Attach click to canvas
+  gl.domElement.onclick = handleClick;
+
+  return null;
 }
 
 export default function IntelGlobe(props: Props) {
@@ -26,14 +110,21 @@ export default function IntelGlobe(props: Props) {
         gl={{ antialias: true, alpha: true }}
         style={{ background: 'transparent' }}
       >
-        <ambientLight intensity={0.2} />
-        <pointLight position={[10, 5, 10]} intensity={0.3} color="#6094d4" />
-        <pointLight position={[-10, -5, -10]} intensity={0.15} color="#1e40af" />
+        <ambientLight intensity={0.15} />
+        <pointLight position={[10, 5, 10]} intensity={0.25} color="#5a8ec4" />
+        <pointLight position={[-10, -5, -10]} intensity={0.1} color="#1e3a6e" />
 
         <Suspense fallback={null}>
-          <Stars radius={80} depth={60} count={2000} factor={2.5} saturation={0.1} fade speed={0.2} />
+          <Stars radius={80} depth={60} count={2500} factor={2} saturation={0.05} fade speed={0.15} />
           <EarthMesh />
           <GlobeMarkers {...props} />
+          <ClickHandler
+            aircraft={props.aircraft}
+            ships={props.ships}
+            satellites={props.satellites}
+            cyberThreats={props.cyberThreats}
+            onSelectAsset={props.onSelectAsset}
+          />
         </Suspense>
 
         <OrbitControls
@@ -42,7 +133,7 @@ export default function IntelGlobe(props: Props) {
           minDistance={3}
           maxDistance={12}
           autoRotate={true}
-          autoRotateSpeed={0.12}
+          autoRotateSpeed={0.1}
           rotateSpeed={0.5}
           zoomSpeed={0.8}
         />

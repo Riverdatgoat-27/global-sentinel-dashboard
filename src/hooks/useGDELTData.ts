@@ -11,7 +11,6 @@ interface GDELTArticle {
   sourcecountry: string;
 }
 
-// Map country codes to approximate lat/lng
 const countryCoords: Record<string, { lat: number; lng: number }> = {
   US: { lat: 38.9, lng: -77.0 }, UK: { lat: 51.5, lng: -0.1 }, FR: { lat: 48.9, lng: 2.3 },
   DE: { lat: 52.5, lng: 13.4 }, RU: { lat: 55.8, lng: 37.6 }, CN: { lat: 39.9, lng: 116.4 },
@@ -53,11 +52,11 @@ export function useGDELTData(refreshInterval = 120000) {
 
   const fetchEvents = useCallback(async () => {
     try {
-      // GDELT DOC 2.0 API - free, no key required
+      // GDELT DOC 2.0 API - parentheses required for OR terms
       const queries = [
-        'military OR missile OR airstrike OR conflict',
-        'cyber attack OR ransomware OR hacking',
-        'protest OR riot OR unrest',
+        '(military OR missile OR airstrike OR conflict)',
+        '(cyber attack OR ransomware OR hacking)',
+        '(protest OR riot OR unrest)',
       ];
       
       const allArticles: GDELTArticle[] = [];
@@ -67,17 +66,21 @@ export function useGDELTData(refreshInterval = 120000) {
           const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(query)}&mode=artlist&maxrecords=15&format=json&sort=datedesc`;
           const res = await fetch(url);
           if (res.ok) {
-            const data = await res.json();
-            if (data.articles) {
-              allArticles.push(...data.articles);
+            const text = await res.text();
+            try {
+              const data = JSON.parse(text);
+              if (data.articles) {
+                allArticles.push(...data.articles);
+              }
+            } catch {
+              // Response wasn't valid JSON
             }
           }
         } catch {
-          // Individual query failed, continue
+          // Individual query failed
         }
       }
 
-      // Deduplicate by title similarity and map to GlobeEvents
       const seen = new Set<string>();
       const globeEvents: GlobeEvent[] = [];
 

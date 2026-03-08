@@ -1,6 +1,6 @@
 // Types for all intelligence data across the platform
 
-export type GlobeEventType = 'earthquake' | 'cyber' | 'military' | 'protest' | 'financial' | 'aircraft' | 'satellite' | 'ship';
+export type GlobeEventType = 'earthquake' | 'cyber' | 'military' | 'protest' | 'financial' | 'aircraft' | 'satellite' | 'ship' | 'missile' | 'infrastructure';
 
 export type Severity = 'critical' | 'high' | 'medium' | 'low';
 
@@ -43,6 +43,7 @@ export interface AircraftState {
   velocity: number | null;
   heading: number | null;
   onGround: boolean;
+  category?: 'commercial' | 'cargo' | 'military' | 'helicopter' | 'unknown';
 }
 
 export interface SatelliteData {
@@ -82,6 +83,65 @@ export interface CyberThreat {
   status: 'active' | 'mitigated' | 'investigating';
 }
 
+export interface MissileEvent {
+  id: string;
+  title: string;
+  launchLat: number;
+  launchLng: number;
+  targetLat: number;
+  targetLng: number;
+  severity: Severity;
+  timestamp: string;
+  source: string;
+  type: 'ballistic' | 'cruise' | 'hypersonic' | 'test';
+  status: 'launched' | 'intercepted' | 'impact' | 'test';
+}
+
+export interface InfrastructurePoint {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  type: 'airport' | 'port' | 'military_base' | 'nuclear_plant' | 'data_center';
+  country: string;
+  description: string;
+}
+
+export interface CCTVCamera {
+  id: string;
+  name: string;
+  location: string;
+  url: string;
+  thumbnailUrl: string;
+  type: 'traffic' | 'city' | 'weather' | 'port';
+  country: string;
+  lat: number;
+  lng: number;
+}
+
+export interface VideoIntel {
+  id: string;
+  title: string;
+  thumbnailUrl: string;
+  videoUrl: string;
+  source: string;
+  category: 'military' | 'protest' | 'disaster' | 'cyber' | 'geopolitical';
+  timestamp: string;
+  location: string;
+}
+
+export interface AlertNotification {
+  id: string;
+  type: 'cyber' | 'missile' | 'military' | 'disaster' | 'market';
+  title: string;
+  description: string;
+  severity: Severity;
+  timestamp: string;
+  lat?: number;
+  lng?: number;
+  acknowledged: boolean;
+}
+
 export interface LayerVisibility {
   earthquakes: boolean;
   cyberAttacks: boolean;
@@ -90,6 +150,7 @@ export interface LayerVisibility {
   satellites: boolean;
   ships: boolean;
   infrastructure: boolean;
+  missiles: boolean;
 }
 
 export interface AIInsight {
@@ -99,4 +160,12 @@ export interface AIInsight {
   category: string;
   timestamp: string;
   relatedEvents: string[];
+}
+
+export interface TimelineState {
+  isPlaying: boolean;
+  currentTime: number;
+  startTime: number;
+  endTime: number;
+  speed: number;
 }

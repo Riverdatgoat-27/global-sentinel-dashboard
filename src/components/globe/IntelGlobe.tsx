@@ -3,7 +3,7 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
 import EarthMesh from './EarthMesh';
 import GlobeMarkers from './GlobeMarkers';
-import type { GlobeEvent, CyberThreat, AircraftState, SatelliteData, ShipData, LayerVisibility } from '@/types/intelligence';
+import type { GlobeEvent, CyberThreat, AircraftState, SatelliteData, ShipData, LayerVisibility, MissileEvent, InfrastructurePoint } from '@/types/intelligence';
 
 interface Props {
   earthquakes: GlobeEvent[];
@@ -12,6 +12,8 @@ interface Props {
   aircraft: AircraftState[];
   satellites: SatelliteData[];
   ships: ShipData[];
+  missiles: MissileEvent[];
+  infrastructure: InfrastructurePoint[];
   layers: LayerVisibility;
   onSelectEvent?: (event: GlobeEvent | null) => void;
 }
@@ -24,11 +26,12 @@ export default function IntelGlobe(props: Props) {
         gl={{ antialias: true, alpha: true }}
         style={{ background: 'transparent' }}
       >
-        <ambientLight intensity={0.1} />
-        <pointLight position={[10, 5, 10]} intensity={0.3} color="#00ff41" />
+        <ambientLight intensity={0.15} />
+        <pointLight position={[10, 5, 10]} intensity={0.4} color="#00ff41" />
+        <pointLight position={[-10, -5, -10]} intensity={0.2} color="#0044ff" />
 
         <Suspense fallback={null}>
-          <Stars radius={50} depth={50} count={2000} factor={3} saturation={0} fade speed={0.5} />
+          <Stars radius={80} depth={60} count={3000} factor={3} saturation={0} fade speed={0.3} />
           <EarthMesh />
           <GlobeMarkers {...props} />
         </Suspense>
@@ -37,8 +40,9 @@ export default function IntelGlobe(props: Props) {
           enablePan={false}
           enableZoom={true}
           minDistance={3}
-          maxDistance={10}
-          autoRotate={false}
+          maxDistance={12}
+          autoRotate={true}
+          autoRotateSpeed={0.15}
           rotateSpeed={0.5}
           zoomSpeed={0.8}
         />

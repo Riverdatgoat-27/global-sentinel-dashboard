@@ -178,25 +178,25 @@ export function useSimulatedData() {
   useEffect(() => {
     const updateSatellites = () => setSatellites(generateSatellites());
     updateSatellites();
-    const interval = setInterval(updateSatellites, 5000);
+    const interval = setInterval(updateSatellites, 2000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     setShips(generateShips());
-    const interval = setInterval(() => setShips(prev => moveShips(prev)), 3000);
+    const interval = setInterval(() => setShips(prev => moveShips(prev)), 1000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     setSubmarines(generateSubmarines());
-    const interval = setInterval(() => setSubmarines(prev => moveSubmarines(prev)), 4000);
+    const interval = setInterval(() => setSubmarines(prev => moveSubmarines(prev)), 1500);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     setMarineAnimals(generateMarineAnimals());
-    const interval = setInterval(() => setMarineAnimals(prev => moveMarineAnimals(prev)), 4000);
+    const interval = setInterval(() => setMarineAnimals(prev => moveMarineAnimals(prev)), 1500);
     return () => clearInterval(interval);
   }, []);
 

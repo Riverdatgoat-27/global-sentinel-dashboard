@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { GlobeEvent, EarthquakeFeature } from '@/types/intelligence';
 
-export function useEarthquakeData(refreshInterval = 300000) {
+export function useEarthquakeData(refreshInterval = 60000) {
   const [earthquakes, setEarthquakes] = useState<GlobeEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

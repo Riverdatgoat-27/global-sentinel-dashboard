@@ -96,9 +96,14 @@ export const videoIntel: VideoIntel[] = [
 ];
 
 export const missileEvents: MissileEvent[] = [
-  { id: 'msl-1', title: 'Ballistic Missile Test Launch', launchLat: 39.0, launchLng: 125.8, targetLat: 40.5, targetLng: 132.0, severity: 'critical', timestamp: new Date().toISOString(), source: 'NORAD', type: 'ballistic', status: 'test' },
-  { id: 'msl-2', title: 'Cruise Missile Strike', launchLat: 48.3, launchLng: 37.8, targetLat: 50.4, targetLng: 30.5, severity: 'critical', timestamp: new Date().toISOString(), source: 'Liveuamap', type: 'cruise', status: 'launched' },
-  { id: 'msl-3', title: 'Intercepted Missile - Iron Dome', launchLat: 31.5, launchLng: 34.3, targetLat: 32.1, targetLng: 34.8, severity: 'high', timestamp: new Date().toISOString(), source: 'IDF', type: 'ballistic', status: 'intercepted' },
+  { id: 'msl-1', title: 'DPRK Hwasong-18 ICBM Test', launchLat: 39.0, launchLng: 125.8, targetLat: 40.5, targetLng: 132.0, severity: 'critical', timestamp: new Date().toISOString(), source: 'NORAD / USSPACECOM', type: 'ballistic', status: 'test' },
+  { id: 'msl-2', title: 'Kalibr Cruise Missile Salvo → Kyiv', launchLat: 45.0, launchLng: 35.0, targetLat: 50.4, targetLng: 30.5, severity: 'critical', timestamp: new Date().toISOString(), source: 'Liveuamap / CERT-UA', type: 'cruise', status: 'launched' },
+  { id: 'msl-3', title: 'Iron Dome Intercept - Gaza Rockets', launchLat: 31.5, launchLng: 34.3, targetLat: 32.1, targetLng: 34.8, severity: 'high', timestamp: new Date().toISOString(), source: 'IDF Spokesperson', type: 'ballistic', status: 'intercepted' },
+  { id: 'msl-4', title: 'Iskander-M Strike - Kharkiv Oblast', launchLat: 50.5, launchLng: 36.3, targetLat: 49.9, targetLng: 36.2, severity: 'critical', timestamp: new Date().toISOString(), source: 'UA Air Force', type: 'ballistic', status: 'launched' },
+  { id: 'msl-5', title: 'Houthi Anti-Ship Missile - Red Sea', launchLat: 15.5, launchLng: 43.0, targetLat: 14.0, targetLng: 42.5, severity: 'high', timestamp: new Date().toISOString(), source: 'CENTCOM', type: 'cruise', status: 'launched' },
+  { id: 'msl-6', title: 'Shahed-136 Drone Swarm → Odesa', launchLat: 44.0, launchLng: 40.0, targetLat: 46.5, targetLng: 30.7, severity: 'high', timestamp: new Date().toISOString(), source: 'UA Air Force', type: 'cruise', status: 'launched' },
+  { id: 'msl-7', title: 'Iranian Emad MRBM - Test Launch', launchLat: 35.2, launchLng: 53.0, targetLat: 33.0, targetLng: 57.0, severity: 'critical', timestamp: new Date().toISOString(), source: 'IRGC / Satellite OSINT', type: 'ballistic', status: 'test' },
+  { id: 'msl-8', title: 'Arrow-3 Intercept - Ballistic Threat', launchLat: 33.5, launchLng: 48.0, targetLat: 32.0, targetLng: 34.8, severity: 'critical', timestamp: new Date().toISOString(), source: 'IMDO / IDF', type: 'ballistic', status: 'intercepted' },
 ];
 
 // Radio stations organized by region

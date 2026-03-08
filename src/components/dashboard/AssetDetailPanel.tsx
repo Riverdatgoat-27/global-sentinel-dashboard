@@ -248,25 +248,66 @@ function CyberInfo({ data }: { data: CyberThreat }) {
   );
 }
 
-function FreqRow({ freq, label }: { freq: string; label: string }) {
+function LiveFreqRow({ freq, label, streamUrl }: { freq: string; label: string; streamUrl?: string }) {
+  const [playing, setPlaying] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const toggle = () => {
+    if (!streamUrl) return;
+    if (playing) {
+      audioRef.current?.pause();
+      audioRef.current = null;
+      setPlaying(false);
+    } else {
+      setLoading(true);
+      const audio = new Audio(streamUrl);
+      audio.crossOrigin = 'anonymous';
+      audio.onplaying = () => { setLoading(false); setPlaying(true); };
+      audio.onerror = () => { setLoading(false); setPlaying(false); };
+      audio.play().catch(() => { setLoading(false); });
+      audioRef.current = audio;
+    }
+  };
+
+  useEffect(() => {
+    return () => { audioRef.current?.pause(); audioRef.current = null; };
+  }, []);
+
   return (
-    <div className="flex items-center gap-2 py-1.5 px-2 rounded bg-muted/30 border border-border/50">
-      <Signal className="w-3 h-3 text-neon-green shrink-0" />
-      <span className="text-[10px] font-mono text-neon-green">{freq}</span>
+    <div
+      onClick={streamUrl ? toggle : undefined}
+      className={`flex items-center gap-2 py-1.5 px-2 rounded border border-border/50 transition-all ${
+        streamUrl ? 'cursor-pointer hover:bg-primary/10' : ''
+      } ${playing ? 'bg-primary/15 border-primary/40' : 'bg-muted/30'}`}
+    >
+      {streamUrl ? (
+        playing ? <Volume2 className="w-3 h-3 text-neon-green shrink-0 animate-pulse" /> :
+        loading ? <Radio className="w-3 h-3 text-neon-amber shrink-0 animate-spin" /> :
+        <Radio className="w-3 h-3 text-muted-foreground shrink-0" />
+      ) : (
+        <Signal className="w-3 h-3 text-neon-green shrink-0" />
+      )}
+      <span className={`text-[10px] font-mono ${playing ? 'text-neon-green' : 'text-neon-green/70'}`}>{freq}</span>
       <span className="text-[9px] text-muted-foreground ml-auto">{label}</span>
+      {streamUrl && (
+        <span className={`text-[8px] font-mono ${playing ? 'text-neon-green' : 'text-muted-foreground/50'}`}>
+          {playing ? '● LIVE' : loading ? '...' : '▶'}
+        </span>
+      )}
     </div>
   );
 }
 
 function AircraftRadio({ data }: { data: AircraftState }) {
-  const prefix = getCallsignPrefix(data.callsign);
-  const freqs = aviationFrequencies[prefix] || [{ freq: '121.500 MHz', name: 'Emergency Guard' }];
+  const isMil = data.category === 'military' || data.category === 'government';
+  const streams = isMil ? militaryStreams : aviationStreams;
   return (
     <div className="space-y-1.5">
-      <div className="text-[9px] text-muted-foreground font-mono uppercase mb-2">Aviation Frequencies</div>
-      {freqs.map((f, i) => <FreqRow key={i} freq={`${f.freq} MHz`} label={f.name} />)}
-      <FreqRow freq="121.500 MHz" label="VHF Guard" />
-      <FreqRow freq="243.000 MHz" label="UHF Guard" />
+      <div className="text-[9px] text-muted-foreground font-mono uppercase mb-2">
+        {isMil ? '🔒 Military / Gov Frequencies' : '✈️ ATC Live Feeds'} — Tap to listen
+      </div>
+      {streams.map((f, i) => <LiveFreqRow key={i} freq={f.freq} label={f.name} streamUrl={f.streamUrl} />)}
     </div>
   );
 }
@@ -274,8 +315,8 @@ function AircraftRadio({ data }: { data: AircraftState }) {
 function ShipRadio() {
   return (
     <div className="space-y-1.5">
-      <div className="text-[9px] text-muted-foreground font-mono uppercase mb-2">Maritime Frequencies</div>
-      {navalFrequencies.map((f, i) => <FreqRow key={i} freq={f.freq} label={f.name} />)}
+      <div className="text-[9px] text-muted-foreground font-mono uppercase mb-2">🚢 Maritime Radio — Tap to listen</div>
+      {navalStreams.map((f, i) => <LiveFreqRow key={i} freq={f.freq} label={f.name} streamUrl={f.streamUrl} />)}
     </div>
   );
 }
@@ -284,8 +325,8 @@ function SatelliteRadio({ data }: { data: SatelliteData }) {
   const freqs = satelliteFrequencies[data.category] || satelliteFrequencies.communication;
   return (
     <div className="space-y-1.5">
-      <div className="text-[9px] text-muted-foreground font-mono uppercase mb-2">Satellite Bands</div>
-      {freqs.map((f, i) => <FreqRow key={i} freq={f.freq} label={f.band} />)}
+      <div className="text-[9px] text-muted-foreground font-mono uppercase mb-2">🛰️ Satellite Bands (no audio)</div>
+      {freqs.map((f, i) => <LiveFreqRow key={i} freq={f.freq} label={f.band} />)}
     </div>
   );
 }

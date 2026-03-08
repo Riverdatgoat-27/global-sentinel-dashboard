@@ -74,12 +74,16 @@ export const infrastructurePoints: InfrastructurePoint[] = [
 ];
 
 export const cctvCameras: CCTVCamera[] = [
-  { id: 'cam-1', name: 'Times Square NYC', location: 'New York, USA', url: 'https://www.earthcam.com/usa/newyork/timessquare/', thumbnailUrl: '', type: 'city', country: 'USA', lat: 40.76, lng: -73.98 },
-  { id: 'cam-2', name: 'Shibuya Crossing', location: 'Tokyo, Japan', url: 'https://www.earthcam.com/world/japan/tokyo/shibuya/', thumbnailUrl: '', type: 'city', country: 'Japan', lat: 35.66, lng: 139.70 },
-  { id: 'cam-3', name: 'Abbey Road', location: 'London, UK', url: 'https://www.earthcam.com/world/england/london/abbeyroad/', thumbnailUrl: '', type: 'city', country: 'UK', lat: 51.53, lng: -0.18 },
-  { id: 'cam-4', name: 'Port of LA', location: 'Los Angeles, USA', url: 'https://www.portoflosangeles.org/webcam', thumbnailUrl: '', type: 'port', country: 'USA', lat: 33.74, lng: -118.27 },
-  { id: 'cam-5', name: 'Miami Beach', location: 'Miami, USA', url: 'https://www.earthcam.com/usa/florida/miamibeach/', thumbnailUrl: '', type: 'city', country: 'USA', lat: 25.79, lng: -80.13 },
-  { id: 'cam-6', name: 'I-95 Traffic Cam', location: 'Washington DC, USA', url: '', thumbnailUrl: '', type: 'traffic', country: 'USA', lat: 38.91, lng: -77.02 },
+  { id: 'cam-1', name: 'Times Square NYC', location: 'New York, USA', url: 'AdUw5RdyZxI', thumbnailUrl: '', type: 'city', country: 'USA', lat: 40.76, lng: -73.98 },
+  { id: 'cam-2', name: 'Shibuya Crossing', location: 'Tokyo, Japan', url: 'DjYZk8nrXVY', thumbnailUrl: '', type: 'city', country: 'Japan', lat: 35.66, lng: 139.70 },
+  { id: 'cam-3', name: 'Abbey Road London', location: 'London, UK', url: 'Y87VCkoqNKU', thumbnailUrl: '', type: 'city', country: 'UK', lat: 51.53, lng: -0.18 },
+  { id: 'cam-4', name: 'Port of LA', location: 'Los Angeles, USA', url: '1NdFfMLRGNw', thumbnailUrl: '', type: 'port', country: 'USA', lat: 33.74, lng: -118.27 },
+  { id: 'cam-5', name: 'Miami Beach', location: 'Miami, USA', url: '2DC9xXSIDhI', thumbnailUrl: '', type: 'city', country: 'USA', lat: 25.79, lng: -80.13 },
+  { id: 'cam-6', name: 'ISS Earth View', location: 'Low Earth Orbit', url: 'xRPTBhmcyXY', thumbnailUrl: '', type: 'weather', country: 'Intl', lat: 0.0, lng: 0.0 },
+  { id: 'cam-7', name: 'Jackson Hole WY', location: 'Wyoming, USA', url: 'DoGXOP1FMbE', thumbnailUrl: '', type: 'city', country: 'USA', lat: 43.48, lng: -110.76 },
+  { id: 'cam-8', name: 'Venice Beach LA', location: 'Los Angeles, USA', url: 'ZIvLTIBbpLQ', thumbnailUrl: '', type: 'city', country: 'USA', lat: 33.99, lng: -118.47 },
+  { id: 'cam-9', name: 'Dublin City', location: 'Dublin, Ireland', url: 'LCvW29tHYKA', thumbnailUrl: '', type: 'city', country: 'Ireland', lat: 53.35, lng: -6.26 },
+  { id: 'cam-10', name: 'Bosphorus Istanbul', location: 'Istanbul, Turkey', url: 'cKLcmJZo8Qg', thumbnailUrl: '', type: 'port', country: 'Turkey', lat: 41.01, lng: 29.00 },
 ];
 
 export const videoIntel: VideoIntel[] = [
@@ -92,9 +96,14 @@ export const videoIntel: VideoIntel[] = [
 ];
 
 export const missileEvents: MissileEvent[] = [
-  { id: 'msl-1', title: 'Ballistic Missile Test Launch', launchLat: 39.0, launchLng: 125.8, targetLat: 40.5, targetLng: 132.0, severity: 'critical', timestamp: new Date().toISOString(), source: 'NORAD', type: 'ballistic', status: 'test' },
-  { id: 'msl-2', title: 'Cruise Missile Strike', launchLat: 48.3, launchLng: 37.8, targetLat: 50.4, targetLng: 30.5, severity: 'critical', timestamp: new Date().toISOString(), source: 'Liveuamap', type: 'cruise', status: 'launched' },
-  { id: 'msl-3', title: 'Intercepted Missile - Iron Dome', launchLat: 31.5, launchLng: 34.3, targetLat: 32.1, targetLng: 34.8, severity: 'high', timestamp: new Date().toISOString(), source: 'IDF', type: 'ballistic', status: 'intercepted' },
+  { id: 'msl-1', title: 'DPRK Hwasong-18 ICBM Test', launchLat: 39.0, launchLng: 125.8, targetLat: 40.5, targetLng: 132.0, severity: 'critical', timestamp: new Date().toISOString(), source: 'NORAD / USSPACECOM', type: 'ballistic', status: 'test' },
+  { id: 'msl-2', title: 'Kalibr Cruise Missile Salvo → Kyiv', launchLat: 45.0, launchLng: 35.0, targetLat: 50.4, targetLng: 30.5, severity: 'critical', timestamp: new Date().toISOString(), source: 'Liveuamap / CERT-UA', type: 'cruise', status: 'launched' },
+  { id: 'msl-3', title: 'Iron Dome Intercept - Gaza Rockets', launchLat: 31.5, launchLng: 34.3, targetLat: 32.1, targetLng: 34.8, severity: 'high', timestamp: new Date().toISOString(), source: 'IDF Spokesperson', type: 'ballistic', status: 'intercepted' },
+  { id: 'msl-4', title: 'Iskander-M Strike - Kharkiv Oblast', launchLat: 50.5, launchLng: 36.3, targetLat: 49.9, targetLng: 36.2, severity: 'critical', timestamp: new Date().toISOString(), source: 'UA Air Force', type: 'ballistic', status: 'launched' },
+  { id: 'msl-5', title: 'Houthi Anti-Ship Missile - Red Sea', launchLat: 15.5, launchLng: 43.0, targetLat: 14.0, targetLng: 42.5, severity: 'high', timestamp: new Date().toISOString(), source: 'CENTCOM', type: 'cruise', status: 'launched' },
+  { id: 'msl-6', title: 'Shahed-136 Drone Swarm → Odesa', launchLat: 44.0, launchLng: 40.0, targetLat: 46.5, targetLng: 30.7, severity: 'high', timestamp: new Date().toISOString(), source: 'UA Air Force', type: 'cruise', status: 'launched' },
+  { id: 'msl-7', title: 'Iranian Emad MRBM - Test Launch', launchLat: 35.2, launchLng: 53.0, targetLat: 33.0, targetLng: 57.0, severity: 'critical', timestamp: new Date().toISOString(), source: 'IRGC / Satellite OSINT', type: 'ballistic', status: 'test' },
+  { id: 'msl-8', title: 'Arrow-3 Intercept - Ballistic Threat', launchLat: 33.5, launchLng: 48.0, targetLat: 32.0, targetLng: 34.8, severity: 'critical', timestamp: new Date().toISOString(), source: 'IMDO / IDF', type: 'ballistic', status: 'intercepted' },
 ];
 
 // Radio stations organized by region

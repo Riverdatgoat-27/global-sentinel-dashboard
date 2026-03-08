@@ -15,11 +15,14 @@ import AssetDetailPanel, { type SelectedAsset } from '@/components/dashboard/Ass
 import NexusAI, { type CortanaAction } from '@/components/dashboard/NexusAI';
 import LiveInfoTicker from '@/components/dashboard/LiveInfoTicker';
 import CCTVViewer from '@/components/dashboard/CCTVViewer';
+import WarPanel from '@/components/dashboard/WarPanel';
+import NewsFeedPanel from '@/components/dashboard/NewsFeedPanel';
 import IntelGlobe, { type GlobeControlHandle } from '@/components/globe/IntelGlobe';
 import { useEarthquakeData } from '@/hooks/useEarthquakeData';
 import { useAircraftData } from '@/hooks/useAircraftData';
 import { useSimulatedData } from '@/hooks/useSimulatedData';
 import { useGDELTData } from '@/hooks/useGDELTData';
+import { useRealTimeNews } from '@/hooks/useRealTimeNews';
 import { infrastructurePoints, cctvCameras } from '@/data/mockData';
 import type { LayerVisibility, CCTVCamera } from '@/types/intelligence';
 
@@ -48,6 +51,7 @@ const Index = () => {
   const { aircraft } = useAircraftData();
   const { satellites, ships, marineAnimals, cyberThreats, militaryEvents, missiles, alerts, acknowledgeAlert } = useSimulatedData();
   const { events: gdeltEvents } = useGDELTData();
+  const { news, conflicts, loading: newsLoading, refetch: refetchNews } = useRealTimeNews();
   const globeRef = useRef<GlobeControlHandle>(null);
 
   const [layers, setLayers] = useState<LayerVisibility>({
@@ -63,6 +67,7 @@ const Index = () => {
   });
 
   const [bottomTab, setBottomTab] = useState<'financial' | 'cctv' | 'video' | 'radio'>('financial');
+  const [leftTab, setLeftTab] = useState<'intel' | 'wars' | 'news'>('intel');
   const [selectedAsset, setSelectedAsset] = useState<SelectedAsset>(null);
   const [selectedCamera, setSelectedCamera] = useState<CCTVCamera | null>(null);
 
@@ -164,8 +169,25 @@ const Index = () => {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel */}
         <div className="w-60 shrink-0 border-r border-border flex flex-col">
-          <div className="flex-1 overflow-hidden">
-            <EventFeed events={allGlobeEvents} cyberThreats={cyberThreats} />
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <div className="flex border-b border-border bg-card/50">
+              {(['intel', 'wars', 'news'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setLeftTab(t)}
+                  className={`flex-1 px-2 py-1 text-[8px] font-mono tracking-wider uppercase transition-all ${
+                    leftTab === t ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {t === 'intel' ? '📡 INTEL' : t === 'wars' ? '⚔️ WARS' : '📰 NEWS'}
+                </button>
+              ))}
+            </div>
+            <div className="flex-1 overflow-hidden">
+              {leftTab === 'intel' && <EventFeed events={allGlobeEvents} cyberThreats={cyberThreats} />}
+              {leftTab === 'wars' && <WarPanel conflicts={conflicts} onNavigate={(lat, lng) => globeRef.current?.navigateTo(lat, lng, 5)} />}
+              {leftTab === 'news' && <NewsFeedPanel news={news} loading={newsLoading} onRefresh={refetchNews} />}
+            </div>
           </div>
           <div className="h-44 shrink-0 border-t border-border overflow-hidden">
             <AlertPanel alerts={alerts} onAcknowledge={acknowledgeAlert} />
@@ -207,8 +229,11 @@ const Index = () => {
                 { label: 'USGS', value: earthquakes.length, color: 'text-neon-amber' },
                 { label: 'AIRCRAFT', value: aircraft.length, color: 'text-neon-cyan' },
                 { label: 'GDELT', value: gdeltEvents.length, color: 'text-primary' },
-                { label: 'THREATS', value: cyberThreats.length + missiles.length, color: 'text-neon-red' },
+                { label: 'MISSILES', value: missiles.length, color: 'text-neon-red' },
+                { label: 'THREATS', value: cyberThreats.length, color: 'text-neon-amber' },
                 { label: 'CCTV', value: cctvCameras.length, color: 'text-neon-green' },
+                { label: 'NEWS', value: news.length, color: 'text-primary' },
+                { label: 'WARS', value: conflicts.length, color: 'text-neon-red' },
               ].map(stat => (
                 <div key={stat.label} className="bg-card/80 backdrop-blur-sm border border-border/50 px-2 py-1 rounded text-[8px] flex items-center gap-1.5">
                   <span className="text-muted-foreground font-mono">{stat.label}</span>

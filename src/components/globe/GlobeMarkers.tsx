@@ -137,24 +137,45 @@ function CyberAttackLines({ threats }: { threats: CyberThreat[] }) {
 function MissileArcs({ missiles }: { missiles: MissileEvent[] }) {
   const progressRef = useRef(0);
   const meshRef = useRef<THREE.InstancedMesh>(null);
+  const trailRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   useFrame((_, delta) => {
-    progressRef.current = (progressRef.current + delta * 0.4) % 1;
+    progressRef.current = (progressRef.current + delta * 0.3) % 1;
     if (meshRef.current) {
       missiles.forEach((m, i) => {
         const start = latLngToVector3(m.launchLat, m.launchLng, 2.02);
         const end = latLngToVector3(m.targetLat, m.targetLng, 2.02);
         const mid = start.clone().add(end).multiplyScalar(0.5);
-        mid.normalize().multiplyScalar(3.0);
+        mid.normalize().multiplyScalar(m.type === 'ballistic' ? 3.5 : 2.8);
         const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
         const point = curve.getPoint(progressRef.current);
         dummy.position.copy(point);
-        dummy.scale.setScalar(0.015);
+        dummy.scale.setScalar(0.02);
         dummy.updateMatrix();
         meshRef.current!.setMatrixAt(i, dummy.matrix);
       });
       meshRef.current.instanceMatrix.needsUpdate = true;
+    }
+    // Trail dots
+    if (trailRef.current) {
+      const trailCount = 8;
+      missiles.forEach((m, i) => {
+        const start = latLngToVector3(m.launchLat, m.launchLng, 2.02);
+        const end = latLngToVector3(m.targetLat, m.targetLng, 2.02);
+        const mid = start.clone().add(end).multiplyScalar(0.5);
+        mid.normalize().multiplyScalar(m.type === 'ballistic' ? 3.5 : 2.8);
+        const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+        for (let t = 0; t < trailCount; t++) {
+          const trailT = (progressRef.current - t * 0.03 + 1) % 1;
+          const pt = curve.getPoint(trailT);
+          dummy.position.copy(pt);
+          dummy.scale.setScalar(0.008 * (1 - t / trailCount));
+          dummy.updateMatrix();
+          trailRef.current!.setMatrixAt(i * trailCount + t, dummy.matrix);
+        }
+      });
+      trailRef.current.instanceMatrix.needsUpdate = true;
     }
   });
 
@@ -163,11 +184,12 @@ function MissileArcs({ missiles }: { missiles: MissileEvent[] }) {
       const start = latLngToVector3(m.launchLat, m.launchLng, 2.02);
       const end = latLngToVector3(m.targetLat, m.targetLng, 2.02);
       const mid = start.clone().add(end).multiplyScalar(0.5);
-      mid.normalize().multiplyScalar(3.0);
+      mid.normalize().multiplyScalar(m.type === 'ballistic' ? 3.5 : 2.8);
       const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
-      const points = curve.getPoints(60);
+      const points = curve.getPoints(80);
       const geom = new THREE.BufferGeometry().setFromPoints(points);
-      const mat = new THREE.LineBasicMaterial({ color: '#ff1744', transparent: true, opacity: 0.7 });
+      const color = m.status === 'intercepted' ? '#00e676' : m.type === 'ballistic' ? '#ff1744' : '#ff6d00';
+      const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.5 });
       return new THREE.Line(geom, mat);
     });
   }, [missiles]);
@@ -179,11 +201,19 @@ function MissileArcs({ missiles }: { missiles: MissileEvent[] }) {
       {arcLines.map((obj, i) => (
         <primitive key={`arc-${i}`} object={obj} />
       ))}
+      {/* Warhead dots */}
       <instancedMesh ref={meshRef} args={[undefined, undefined, missiles.length]}>
-        <sphereGeometry args={[1, 6, 6]} />
+        <sphereGeometry args={[1, 8, 8]} />
         <meshBasicMaterial color="#ff1744" />
       </instancedMesh>
+      {/* Trail */}
+      <instancedMesh ref={trailRef} args={[undefined, undefined, missiles.length * 8]}>
+        <sphereGeometry args={[1, 4, 4]} />
+        <meshBasicMaterial color="#ff6d00" transparent opacity={0.6} />
+      </instancedMesh>
+      {/* Launch sites */}
       <EventMarkers events={missiles.map(m => ({ lat: m.launchLat, lng: m.launchLng }))} color="#ff6d00" pulseSpeed={5} />
+      {/* Target sites */}
       <EventMarkers events={missiles.map(m => ({ lat: m.targetLat, lng: m.targetLng }))} color="#ff1744" pulseSpeed={6} />
     </group>
   );

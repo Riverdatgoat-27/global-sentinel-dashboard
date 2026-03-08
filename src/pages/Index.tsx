@@ -168,8 +168,25 @@ const Index = () => {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel */}
         <div className="w-60 shrink-0 border-r border-border flex flex-col">
-          <div className="flex-1 overflow-hidden">
-            <EventFeed events={allGlobeEvents} cyberThreats={cyberThreats} />
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <div className="flex border-b border-border bg-card/50">
+              {(['intel', 'wars', 'news'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setLeftTab(t)}
+                  className={`flex-1 px-2 py-1 text-[8px] font-mono tracking-wider uppercase transition-all ${
+                    leftTab === t ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {t === 'intel' ? '📡 INTEL' : t === 'wars' ? '⚔️ WARS' : '📰 NEWS'}
+                </button>
+              ))}
+            </div>
+            <div className="flex-1 overflow-hidden">
+              {leftTab === 'intel' && <EventFeed events={allGlobeEvents} cyberThreats={cyberThreats} />}
+              {leftTab === 'wars' && <WarPanel conflicts={conflicts} onNavigate={(lat, lng) => globeRef.current?.navigateTo(lat, lng, 5)} />}
+              {leftTab === 'news' && <NewsFeedPanel news={news} loading={newsLoading} onRefresh={refetchNews} />}
+            </div>
           </div>
           <div className="h-44 shrink-0 border-t border-border overflow-hidden">
             <AlertPanel alerts={alerts} onAcknowledge={acknowledgeAlert} />

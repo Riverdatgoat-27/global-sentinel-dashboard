@@ -86,7 +86,7 @@
 
   .panel {
     @apply bg-card border border-border rounded-md relative overflow-hidden;
-    box-shadow: 0 1px 3px hsl(0 0% 0% / 0.3), 0 0 0 1px hsl(225 10% 14% / 0.5);
+    box-shadow: 0 2px 8px hsl(0 0% 0% / 0.25);
   }
 
   .panel::before {
@@ -96,7 +96,7 @@
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, hsl(215 80% 55% / 0.15), transparent);
+    background: linear-gradient(90deg, transparent, hsl(215 80% 55% / 0.1), transparent);
   }
 
   .panel-header {

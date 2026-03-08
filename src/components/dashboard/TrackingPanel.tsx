@@ -6,20 +6,23 @@ interface Props {
   aircraft: AircraftState[];
   satellites: SatelliteData[];
   ships: ShipData[];
+  onSelectAircraft?: (ac: AircraftState) => void;
+  onSelectShip?: (ship: ShipData) => void;
+  onSelectSatellite?: (sat: SatelliteData) => void;
 }
 
-export default function TrackingPanel({ aircraft, satellites, ships }: Props) {
+export default function TrackingPanel({ aircraft, satellites, ships, onSelectAircraft, onSelectShip, onSelectSatellite }: Props) {
   return (
     <div className="panel h-full flex flex-col">
       <div className="panel-header">
         <Navigation className="w-3.5 h-3.5 text-neon-blue" />
         Asset Tracking
         <span className="ml-auto text-[9px] text-muted-foreground font-mono">
-          {aircraft.length + ships.length + satellites.length} TOTAL
+          {aircraft.length + ships.length + satellites.length}
         </span>
       </div>
       <div className="flex-1 overflow-y-auto">
-        {/* Aircraft section */}
+        {/* Aircraft */}
         <div className="px-2.5 py-1.5 border-b border-border bg-muted/20">
           <div className="flex items-center gap-1.5 text-[9px] font-mono text-neon-cyan tracking-wider">
             <Plane className="w-3 h-3" />
@@ -32,7 +35,8 @@ export default function TrackingPanel({ aircraft, satellites, ships }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: i * 0.03 }}
-            className="px-2.5 py-1.5 border-b border-border text-[10px] hover:bg-muted/20 transition-colors"
+            onClick={() => onSelectAircraft?.(ac)}
+            className="px-2.5 py-1.5 border-b border-border text-[10px] hover:bg-primary/5 cursor-pointer transition-colors"
           >
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-1.5">
@@ -55,16 +59,11 @@ export default function TrackingPanel({ aircraft, satellites, ships }: Props) {
                 <Compass className="w-2.5 h-2.5" />
                 {ac.heading ? `${Math.round(ac.heading)}°` : '---'}
               </span>
-              {ac.latitude && ac.longitude && (
-                <span className="text-[8px]">
-                  {ac.latitude.toFixed(2)}°, {ac.longitude.toFixed(2)}°
-                </span>
-              )}
             </div>
           </motion.div>
         ))}
 
-        {/* Ships section */}
+        {/* Ships */}
         <div className="px-2.5 py-1.5 border-b border-border bg-muted/20">
           <div className="flex items-center gap-1.5 text-[9px] font-mono text-neon-green tracking-wider">
             <Ship className="w-3 h-3" />
@@ -77,7 +76,8 @@ export default function TrackingPanel({ aircraft, satellites, ships }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: i * 0.03 }}
-            className="px-2.5 py-1.5 border-b border-border text-[10px] hover:bg-muted/20 transition-colors"
+            onClick={() => onSelectShip?.(ship)}
+            className="px-2.5 py-1.5 border-b border-border text-[10px] hover:bg-primary/5 cursor-pointer transition-colors"
           >
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-1.5">
@@ -103,7 +103,7 @@ export default function TrackingPanel({ aircraft, satellites, ships }: Props) {
           </motion.div>
         ))}
 
-        {/* Satellites section */}
+        {/* Satellites */}
         <div className="px-2.5 py-1.5 border-b border-border bg-muted/20">
           <div className="flex items-center gap-1.5 text-[9px] font-mono text-neon-blue tracking-wider">
             <Satellite className="w-3 h-3" />
@@ -116,7 +116,8 @@ export default function TrackingPanel({ aircraft, satellites, ships }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: i * 0.03 }}
-            className="px-2.5 py-1.5 border-b border-border text-[10px] hover:bg-muted/20 transition-colors"
+            onClick={() => onSelectSatellite?.(sat)}
+            className="px-2.5 py-1.5 border-b border-border text-[10px] hover:bg-primary/5 cursor-pointer transition-colors"
           >
             <div className="flex justify-between items-center">
               <span className={`font-mono font-semibold ${sat.category === 'military' ? 'text-neon-red' : 'text-foreground'}`}>

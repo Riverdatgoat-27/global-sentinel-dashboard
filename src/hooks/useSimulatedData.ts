@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { SatelliteData, ShipData, CyberThreat, GlobeEvent, MissileEvent, AlertNotification } from '@/types/intelligence';
+import type { SatelliteData, ShipData, CyberThreat, GlobeEvent, MissileEvent, AlertNotification, MarineAnimal } from '@/types/intelligence';
 import { missileEvents as staticMissiles } from '@/data/mockData';
 
 function generateSatellites(): SatelliteData[] {
@@ -30,45 +30,69 @@ function generateSatellites(): SatelliteData[] {
   return satellites;
 }
 
-// Ships with realistic movement based on heading and speed
 function generateShips(): ShipData[] {
   return [
-    { id: 'ship-1', name: 'MSC OSCAR', lat: 1.3, lng: 103.8, speed: 14, heading: 270, type: 'cargo', country: 'Panama', flag: '🇵🇦' },
-    { id: 'ship-2', name: 'EVER GIVEN', lat: 30.0, lng: 32.3, speed: 12, heading: 180, type: 'cargo', country: 'Panama', flag: '🇵🇦' },
-    { id: 'ship-3', name: 'JAHRE VIKING', lat: 25.0, lng: 55.0, speed: 10, heading: 90, type: 'tanker', country: 'Norway', flag: '🇳🇴' },
-    { id: 'ship-4', name: 'USS GERALD R. FORD', lat: 36.0, lng: -6.0, speed: 30, heading: 90, type: 'naval', country: 'USA', flag: '🇺🇸' },
-    { id: 'ship-5', name: 'HMS QUEEN ELIZABETH', lat: 50.8, lng: -1.1, speed: 25, heading: 180, type: 'naval', country: 'UK', flag: '🇬🇧' },
-    { id: 'ship-6', name: 'HARMONY OF THE SEAS', lat: 18.5, lng: -66.0, speed: 18, heading: 135, type: 'passenger', country: 'Bahamas', flag: '🇧🇸' },
-    { id: 'ship-7', name: 'LIAONING', lat: 18.2, lng: 110.3, speed: 28, heading: 45, type: 'naval', country: 'China', flag: '🇨🇳' },
-    { id: 'ship-8', name: 'ATLANTIC HERRING', lat: 62.0, lng: -4.0, speed: 8, heading: 0, type: 'fishing', country: 'Iceland', flag: '🇮🇸' },
-    { id: 'ship-9', name: 'ADMIRAL KUZNETSOV', lat: 69.0, lng: 33.0, speed: 20, heading: 270, type: 'naval', country: 'Russia', flag: '🇷🇺' },
-    { id: 'ship-10', name: 'MAERSK ALABAMA', lat: 2.0, lng: 45.0, speed: 15, heading: 225, type: 'cargo', country: 'Denmark', flag: '🇩🇰' },
-    { id: 'ship-11', name: 'PACIFIC EXPLORER', lat: -15.0, lng: 165.0, speed: 12, heading: 315, type: 'cargo', country: 'Marshall Islands', flag: '🇲🇭' },
-    { id: 'ship-12', name: 'SHANDONG', lat: 20.0, lng: 112.0, speed: 26, heading: 180, type: 'naval', country: 'China', flag: '🇨🇳' },
+    { id: 'ship-1', name: 'MSC OSCAR', lat: 1.3, lng: 103.8, speed: 14, heading: 270, type: 'cargo', country: 'Panama', flag: '🇵🇦', mmsi: '353136000', imo: '9703291', owner: 'Mediterranean Shipping Company', builtYear: 2015, builtAt: 'Daewoo, South Korea', grossTonnage: 192237, length: 395 },
+    { id: 'ship-2', name: 'EVER GIVEN', lat: 30.0, lng: 32.3, speed: 12, heading: 180, type: 'cargo', country: 'Panama', flag: '🇵🇦', mmsi: '353136001', imo: '9811000', owner: 'Shoei Kisen Kaisha', builtYear: 2018, builtAt: 'Imabari, Japan', grossTonnage: 220940, length: 400 },
+    { id: 'ship-3', name: 'JAHRE VIKING', lat: 25.0, lng: 55.0, speed: 10, heading: 90, type: 'tanker', country: 'Norway', flag: '🇳🇴', mmsi: '259000001', owner: 'First Olsen Tankers', builtYear: 1979, builtAt: 'Yokosuka, Japan', grossTonnage: 260941, length: 458 },
+    { id: 'ship-4', name: 'USS GERALD R. FORD', lat: 36.0, lng: -6.0, speed: 30, heading: 90, type: 'naval', country: 'USA', flag: '🇺🇸', mmsi: 'WARSHIP', owner: 'US Navy', builtYear: 2017, builtAt: 'Newport News, VA', grossTonnage: 100000, length: 337 },
+    { id: 'ship-5', name: 'HMS QUEEN ELIZABETH', lat: 50.8, lng: -1.1, speed: 25, heading: 180, type: 'naval', country: 'UK', flag: '🇬🇧', mmsi: 'WARSHIP', owner: 'Royal Navy', builtYear: 2017, builtAt: 'Rosyth, Scotland', grossTonnage: 65000, length: 284 },
+    { id: 'ship-6', name: 'HARMONY OF THE SEAS', lat: 18.5, lng: -66.0, speed: 18, heading: 135, type: 'passenger', country: 'Bahamas', flag: '🇧🇸', mmsi: '311000001', imo: '9682875', owner: 'Royal Caribbean', builtYear: 2016, builtAt: 'Saint-Nazaire, France', grossTonnage: 226963, length: 362 },
+    { id: 'ship-7', name: 'LIAONING', lat: 18.2, lng: 110.3, speed: 28, heading: 45, type: 'naval', country: 'China', flag: '🇨🇳', mmsi: 'WARSHIP', owner: 'PLA Navy', builtYear: 2012, builtAt: 'Dalian, China', grossTonnage: 60000, length: 305 },
+    { id: 'ship-8', name: 'ATLANTIC HERRING', lat: 62.0, lng: -4.0, speed: 8, heading: 0, type: 'fishing', country: 'Iceland', flag: '🇮🇸', mmsi: '251000001', owner: 'Samherji hf', builtYear: 2005, builtAt: 'Akureyri, Iceland', grossTonnage: 3200, length: 75 },
+    { id: 'ship-9', name: 'ADMIRAL KUZNETSOV', lat: 69.0, lng: 33.0, speed: 20, heading: 270, type: 'naval', country: 'Russia', flag: '🇷🇺', mmsi: 'WARSHIP', owner: 'Russian Navy', builtYear: 1990, builtAt: 'Mykolaiv, Ukraine', grossTonnage: 58600, length: 305 },
+    { id: 'ship-10', name: 'MAERSK ALABAMA', lat: 2.0, lng: 45.0, speed: 15, heading: 225, type: 'cargo', country: 'Denmark', flag: '🇩🇰', mmsi: '220000001', owner: 'Maersk Line', builtYear: 1998, builtAt: 'Jinhae, South Korea', grossTonnage: 17000, length: 155 },
+    { id: 'ship-11', name: 'PACIFIC EXPLORER', lat: -15.0, lng: 165.0, speed: 12, heading: 315, type: 'cargo', country: 'Marshall Islands', flag: '🇲🇭', owner: 'Pacific International Lines', builtYear: 2010, builtAt: 'Shanghai, China', grossTonnage: 85000, length: 290 },
+    { id: 'ship-12', name: 'SHANDONG', lat: 20.0, lng: 112.0, speed: 26, heading: 180, type: 'naval', country: 'China', flag: '🇨🇳', mmsi: 'WARSHIP', owner: 'PLA Navy', builtYear: 2019, builtAt: 'Dalian, China', grossTonnage: 70000, length: 315 },
   ];
 }
 
-// Move ships realistically based on heading and speed
 function moveShips(ships: ShipData[]): ShipData[] {
   return ships.map(ship => {
-    // Convert speed (knots) to degrees per second (very rough: 1 knot ≈ 0.000278 deg/s lat)
-    const speedFactor = ship.speed * 0.00005; // exaggerated for visibility
+    const speedFactor = ship.speed * 0.00005;
     const headingRad = (ship.heading * Math.PI) / 180;
-    
     let newLat = ship.lat + Math.cos(headingRad) * speedFactor;
     let newLng = ship.lng + Math.sin(headingRad) * speedFactor;
-    
-    // Slight random heading drift for realism
     let newHeading = ship.heading + (Math.random() - 0.5) * 2;
     if (newHeading < 0) newHeading += 360;
     if (newHeading >= 360) newHeading -= 360;
-    
-    // Wrap coordinates
     if (newLng > 180) newLng -= 360;
     if (newLng < -180) newLng += 360;
     newLat = Math.max(-85, Math.min(85, newLat));
-    
     return { ...ship, lat: newLat, lng: newLng, heading: newHeading };
+  });
+}
+
+function generateMarineAnimals(): MarineAnimal[] {
+  return [
+    { id: 'ma-1', name: 'Blue-17', species: 'Blue Whale', lat: -33.5, lng: 17.8, speed: 4.5, heading: 180, tracker: 'NOAA-SWFSC', lastPing: new Date().toISOString(), category: 'whale' },
+    { id: 'ma-2', name: 'Humpback-42', species: 'Humpback Whale', lat: 21.3, lng: -157.8, speed: 5.2, heading: 220, tracker: 'HIHWNMS', lastPing: new Date().toISOString(), category: 'whale' },
+    { id: 'ma-3', name: 'GWS-Alpha', species: 'Great White Shark', lat: -34.0, lng: 151.2, speed: 3.1, heading: 90, tracker: 'CSIRO-IMOS', lastPing: new Date().toISOString(), category: 'shark' },
+    { id: 'ma-4', name: 'Mako-09', species: 'Shortfin Mako', lat: 28.5, lng: -15.4, speed: 7.8, heading: 270, tracker: 'ICCAT', lastPing: new Date().toISOString(), category: 'shark' },
+    { id: 'ma-5', name: 'Leatherback-LT3', species: 'Leatherback Turtle', lat: 8.2, lng: -79.5, speed: 1.8, heading: 315, tracker: 'Sea Turtle Conservancy', lastPing: new Date().toISOString(), category: 'turtle' },
+    { id: 'ma-6', name: 'Green-GH22', species: 'Green Sea Turtle', lat: -23.4, lng: 152.0, speed: 1.2, heading: 45, tracker: 'GBRMPA', lastPing: new Date().toISOString(), category: 'turtle' },
+    { id: 'ma-7', name: 'Bottlenose-Pod9', species: 'Bottlenose Dolphin', lat: 36.8, lng: -6.2, speed: 8.5, heading: 120, tracker: 'ACCOBAMS', lastPing: new Date().toISOString(), category: 'dolphin' },
+    { id: 'ma-8', name: 'Orca-J35', species: 'Orca', lat: 48.4, lng: -123.2, speed: 6.0, heading: 200, tracker: 'NOAA-NWFSC', lastPing: new Date().toISOString(), category: 'whale' },
+    { id: 'ma-9', name: 'Elephant-Seal-04', species: 'Elephant Seal', lat: -54.3, lng: -36.5, speed: 2.5, heading: 160, tracker: 'BAS', lastPing: new Date().toISOString(), category: 'seal' },
+    { id: 'ma-10', name: 'Tiger-Shark-TS7', species: 'Tiger Shark', lat: 21.0, lng: -156.5, speed: 4.2, heading: 90, tracker: 'HIMB', lastPing: new Date().toISOString(), category: 'shark' },
+    { id: 'ma-11', name: 'Narwhal-N12', species: 'Narwhal', lat: 76.5, lng: -71.0, speed: 2.0, heading: 30, tracker: 'DFO-Canada', lastPing: new Date().toISOString(), category: 'whale' },
+    { id: 'ma-12', name: 'Hammerhead-HH5', species: 'Hammerhead Shark', lat: 0.7, lng: -90.3, speed: 3.5, heading: 150, tracker: 'CDF-Galapagos', lastPing: new Date().toISOString(), category: 'shark' },
+  ];
+}
+
+function moveMarineAnimals(animals: MarineAnimal[]): MarineAnimal[] {
+  return animals.map(a => {
+    const speedFactor = a.speed * 0.00003;
+    const headingRad = (a.heading * Math.PI) / 180;
+    let newLat = a.lat + Math.cos(headingRad) * speedFactor;
+    let newLng = a.lng + Math.sin(headingRad) * speedFactor;
+    let newHeading = a.heading + (Math.random() - 0.5) * 8;
+    if (newHeading < 0) newHeading += 360;
+    if (newHeading >= 360) newHeading -= 360;
+    if (newLng > 180) newLng -= 360;
+    if (newLng < -180) newLng += 360;
+    newLat = Math.max(-85, Math.min(85, newLat));
+    return { ...a, lat: newLat, lng: newLng, heading: newHeading, lastPing: new Date().toISOString() };
   });
 }
 
@@ -114,6 +138,7 @@ function generateAlerts(cyberThreats: CyberThreat[], militaryEvents: GlobeEvent[
 export function useSimulatedData() {
   const [satellites, setSatellites] = useState<SatelliteData[]>([]);
   const [ships, setShips] = useState<ShipData[]>([]);
+  const [marineAnimals, setMarineAnimals] = useState<MarineAnimal[]>([]);
   const [cyberThreats] = useState<CyberThreat[]>(generateCyberThreats());
   const [militaryEvents] = useState<GlobeEvent[]>(generateMilitaryEvents());
   const [missiles] = useState<MissileEvent[]>(staticMissiles);
@@ -126,12 +151,19 @@ export function useSimulatedData() {
     return () => clearInterval(interval);
   }, []);
 
-  // Move ships realistically every 3 seconds
   useEffect(() => {
     setShips(generateShips());
     const interval = setInterval(() => {
       setShips(prev => moveShips(prev));
     }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    setMarineAnimals(generateMarineAnimals());
+    const interval = setInterval(() => {
+      setMarineAnimals(prev => moveMarineAnimals(prev));
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
 
@@ -143,5 +175,5 @@ export function useSimulatedData() {
     setAlerts(prev => prev.map(a => a.id === id ? { ...a, acknowledged: true } : a));
   }, []);
 
-  return { satellites, ships, cyberThreats, militaryEvents, missiles, alerts, acknowledgeAlert };
+  return { satellites, ships, marineAnimals, cyberThreats, militaryEvents, missiles, alerts, acknowledgeAlert };
 }

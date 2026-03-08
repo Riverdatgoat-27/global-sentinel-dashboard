@@ -12,6 +12,7 @@ import VideoIntelPanel from '@/components/dashboard/VideoIntelPanel';
 import RadioScanner from '@/components/dashboard/RadioScanner';
 import TimelineSlider from '@/components/dashboard/TimelineSlider';
 import AssetDetailPanel, { type SelectedAsset } from '@/components/dashboard/AssetDetailPanel';
+import NexusAI from '@/components/dashboard/NexusAI';
 import IntelGlobe from '@/components/globe/IntelGlobe';
 import { useEarthquakeData } from '@/hooks/useEarthquakeData';
 import { useAircraftData } from '@/hooks/useAircraftData';
@@ -23,7 +24,7 @@ import type { LayerVisibility } from '@/types/intelligence';
 const Index = () => {
   const { earthquakes } = useEarthquakeData();
   const { aircraft } = useAircraftData();
-  const { satellites, ships, cyberThreats, militaryEvents, missiles, alerts, acknowledgeAlert } = useSimulatedData();
+  const { satellites, ships, marineAnimals, cyberThreats, militaryEvents, missiles, alerts, acknowledgeAlert } = useSimulatedData();
   const { events: gdeltEvents } = useGDELTData();
 
   const [layers, setLayers] = useState<LayerVisibility>({
@@ -35,6 +36,7 @@ const Index = () => {
     ships: true,
     infrastructure: false,
     missiles: true,
+    marineAnimals: true,
   });
 
   const [bottomTab, setBottomTab] = useState<'financial' | 'cctv' | 'video' | 'radio'>('financial');
@@ -42,6 +44,12 @@ const Index = () => {
 
   const toggleLayer = useCallback((layer: keyof LayerVisibility) => {
     setLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
+  }, []);
+
+  const handleAICommand = useCallback((command: string) => {
+    if (command === 'cctv') setBottomTab('cctv');
+    else if (command === 'financial') setBottomTab('financial');
+    else if (command === 'radio') setBottomTab('radio');
   }, []);
 
   const counts = {
@@ -53,6 +61,7 @@ const Index = () => {
     ships: ships.length,
     missiles: missiles.length,
     infrastructure: infrastructurePoints.length,
+    marineAnimals: marineAnimals.length,
   };
 
   const allGlobeEvents = [...earthquakes, ...militaryEvents, ...gdeltEvents];
@@ -85,10 +94,10 @@ const Index = () => {
               ships={ships}
               missiles={missiles}
               infrastructure={infrastructurePoints}
+              marineAnimals={marineAnimals}
               layers={layers}
               onSelectAsset={setSelectedAsset}
             />
-            {/* Asset detail overlay */}
             <AssetDetailPanel asset={selectedAsset} onClose={() => setSelectedAsset(null)} />
 
             {/* Stats bar */}
@@ -99,6 +108,7 @@ const Index = () => {
                 { label: 'AIRCRAFT', value: aircraft.length, color: 'text-neon-cyan' },
                 { label: 'GDELT', value: gdeltEvents.length, color: 'text-primary' },
                 { label: 'THREATS', value: cyberThreats.length + missiles.length, color: 'text-neon-red' },
+                { label: 'WILDLIFE', value: marineAnimals.length, color: 'text-neon-green' },
               ].map(stat => (
                 <div key={stat.label} className="bg-card/80 backdrop-blur-sm border border-border/50 px-2 py-1 rounded text-[8px] flex items-center gap-1.5">
                   <span className="text-muted-foreground font-mono">{stat.label}</span>
@@ -123,7 +133,7 @@ const Index = () => {
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/20'
                   }`}
                 >
-                  {tab === 'financial' ? 'MARKETS' : tab === 'cctv' ? 'CCTV' : tab === 'video' ? 'INTEL' : 'SCANNER'}
+                  {tab === 'financial' ? 'MARKETS' : tab === 'cctv' ? '📹 CCTV' : tab === 'video' ? 'INTEL' : '📡 SCANNER'}
                 </button>
               ))}
             </div>
@@ -158,6 +168,9 @@ const Index = () => {
           </div>
         </div>
       </div>
+
+      {/* AI Voice Assistant */}
+      <NexusAI alerts={alerts} onCommand={handleAICommand} />
     </div>
   );
 };

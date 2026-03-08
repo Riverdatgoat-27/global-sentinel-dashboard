@@ -281,6 +281,11 @@ export default function RadioScanner() {
               <span>{audioError}</span>
             </div>
           )}
+          {!audioError && isUsingBackupStream && (
+            <div className="mt-1.5 text-[9px] text-muted-foreground font-mono">
+              Primary feed unavailable — using backup stream.
+            </div>
+          )}
         </div>
       )}
 

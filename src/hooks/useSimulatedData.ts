@@ -196,7 +196,7 @@ export function useSimulatedData() {
 
   useEffect(() => {
     setMarineAnimals(generateMarineAnimals());
-    const interval = setInterval(() => setMarineAnimals(prev => moveMarineAnimals(prev)), 4000);
+    const interval = setInterval(() => setMarineAnimals(prev => moveMarineAnimals(prev)), 1500);
     return () => clearInterval(interval);
   }, []);
 

@@ -185,7 +185,7 @@ export const ACTIVE_CONFLICTS: ActiveConflict[] = [
   },
 ];
 
-export function useRealTimeNews(refreshInterval = 90000) {
+export function useRealTimeNews(refreshInterval = 30000) {
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
 

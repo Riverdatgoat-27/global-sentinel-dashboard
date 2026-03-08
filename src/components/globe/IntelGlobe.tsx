@@ -4,7 +4,7 @@ import { OrbitControls, Stars } from '@react-three/drei';
 import * as THREE from 'three';
 import EarthMesh from './EarthMesh';
 import GlobeMarkers from './GlobeMarkers';
-import type { GlobeEvent, CyberThreat, AircraftState, SatelliteData, ShipData, LayerVisibility, MissileEvent, InfrastructurePoint, MarineAnimal, CCTVCamera } from '@/types/intelligence';
+import type { GlobeEvent, CyberThreat, AircraftState, SatelliteData, ShipData, LayerVisibility, MissileEvent, InfrastructurePoint, MarineAnimal, CCTVCamera, SubmarineData } from '@/types/intelligence';
 import type { SelectedAsset } from '@/components/dashboard/AssetDetailPanel';
 
 interface Props {

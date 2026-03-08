@@ -589,6 +589,7 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
 
   const stopListening = useCallback(() => {
     setListening(false);
+    listeningRef.current = false;
     setActivated(false);
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     if (recognitionRef.current) {
@@ -596,6 +597,13 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
       recognitionRef.current = null;
     }
   }, []);
+
+  // Auto-start listening when panel opens
+  useEffect(() => {
+    if (visible && autoListen && !listening) {
+      startListening();
+    }
+  }, [visible]);
 
   const handleTextSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();

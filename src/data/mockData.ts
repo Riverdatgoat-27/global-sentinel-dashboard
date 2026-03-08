@@ -111,7 +111,7 @@ export interface RadioStation {
 }
 
 export const radioStations: RadioStation[] = [
-  // Verified working streams only
+  // News
   { id: 'radio-1', name: 'NPR News', country: 'USA', region: 'North America', streamUrl: 'https://npr-ice.streamguys1.com/live.mp3', language: 'English', type: 'news', lat: 38.9, lng: -77.0 },
   { id: 'radio-2', name: 'BBC World Service', country: 'UK', region: 'Europe', streamUrl: 'http://a.files.bbci.co.uk/media/live/manifesto/audio/simulcast/hls/nonuk/sbr_low/ak/bbc_world_service.m3u8', language: 'English', type: 'news', lat: 51.5, lng: -0.1 },
   { id: 'radio-3', name: 'France Info', country: 'France', region: 'Europe', streamUrl: 'https://icecast.radiofrance.fr/franceinfo-midfi.mp3', language: 'French', type: 'news', lat: 48.9, lng: 2.3 },
@@ -120,12 +120,22 @@ export const radioStations: RadioStation[] = [
   { id: 'radio-13', name: 'Radio New Zealand', country: 'New Zealand', region: 'Oceania', streamUrl: 'https://radionz-ice.streamguys.com/national.mp3', language: 'English', type: 'news', lat: -41.3, lng: 174.8 },
   { id: 'radio-14', name: 'CBC Radio One', country: 'Canada', region: 'North America', streamUrl: 'https://cbcliveradio-lh.akamaihd.net/i/CBCR1_TOR@382229/master.m3u8', language: 'English', type: 'news', lat: 43.7, lng: -79.4 },
   { id: 'radio-15', name: 'WNYC FM', country: 'USA', region: 'North America', streamUrl: 'https://fm939.wnyc.org/wnycfm', language: 'English', type: 'news', lat: 40.7, lng: -74.0 },
+  // Police & Emergency Scanners (Broadcastify public feeds)
+  { id: 'radio-30', name: 'LAPD Police Scanner', country: 'USA', region: 'Police/Emergency', streamUrl: 'https://broadcastify.cdnstream1.com/14439', language: 'English', type: 'emergency', lat: 34.05, lng: -118.24 },
+  { id: 'radio-31', name: 'NYPD Manhattan', country: 'USA', region: 'Police/Emergency', streamUrl: 'https://broadcastify.cdnstream1.com/32318', language: 'English', type: 'emergency', lat: 40.71, lng: -74.01 },
+  { id: 'radio-32', name: 'Chicago Police Zone 1', country: 'USA', region: 'Police/Emergency', streamUrl: 'https://broadcastify.cdnstream1.com/17690', language: 'English', type: 'emergency', lat: 41.88, lng: -87.63 },
+  { id: 'radio-33', name: 'Houston Fire/EMS', country: 'USA', region: 'Police/Emergency', streamUrl: 'https://broadcastify.cdnstream1.com/14580', language: 'English', type: 'emergency', lat: 29.76, lng: -95.37 },
+  { id: 'radio-34', name: 'Miami-Dade Police', country: 'USA', region: 'Police/Emergency', streamUrl: 'https://broadcastify.cdnstream1.com/14603', language: 'English', type: 'emergency', lat: 25.76, lng: -80.19 },
+  { id: 'radio-35', name: 'London Met Police', country: 'UK', region: 'Police/Emergency', streamUrl: 'https://broadcastify.cdnstream1.com/15096', language: 'English', type: 'emergency', lat: 51.50, lng: -0.12 },
+  { id: 'radio-36', name: 'FDNY Citywide', country: 'USA', region: 'Police/Emergency', streamUrl: 'https://broadcastify.cdnstream1.com/9558', language: 'English', type: 'emergency', lat: 40.75, lng: -73.99 },
+  { id: 'radio-37', name: 'Dallas Police', country: 'USA', region: 'Police/Emergency', streamUrl: 'https://broadcastify.cdnstream1.com/13579', language: 'English', type: 'emergency', lat: 32.78, lng: -96.80 },
+  { id: 'radio-38', name: 'San Francisco Police', country: 'USA', region: 'Police/Emergency', streamUrl: 'https://broadcastify.cdnstream1.com/14054', language: 'English', type: 'emergency', lat: 37.77, lng: -122.42 },
+  { id: 'radio-39', name: 'Air Traffic Control JFK', country: 'USA', region: 'Aviation', streamUrl: 'https://broadcastify.cdnstream1.com/36472', language: 'English', type: 'government', lat: 40.64, lng: -73.78 },
+  { id: 'radio-40', name: 'ATC LAX Tower', country: 'USA', region: 'Aviation', streamUrl: 'https://broadcastify.cdnstream1.com/36471', language: 'English', type: 'government', lat: 33.94, lng: -118.41 },
+  // Music & Other
   { id: 'radio-16', name: 'KEXP Seattle', country: 'USA', region: 'North America', streamUrl: 'https://kexp-mp3-128.streamguys1.com/kexp128.mp3', language: 'English', type: 'music', lat: 47.6, lng: -122.3 },
   { id: 'radio-17', name: 'SomaFM DEF CON', country: 'USA', region: 'North America', streamUrl: 'https://ice1.somafm.com/defcon-128-mp3', language: 'English', type: 'government', lat: 37.8, lng: -122.4 },
   { id: 'radio-18', name: 'SomaFM Drone Zone', country: 'USA', region: 'North America', streamUrl: 'https://ice1.somafm.com/dronezone-128-mp3', language: 'English', type: 'music', lat: 37.8, lng: -122.4 },
-  { id: 'radio-19', name: 'SomaFM Groove Salad', country: 'USA', region: 'North America', streamUrl: 'https://ice1.somafm.com/groovesalad-128-mp3', language: 'English', type: 'music', lat: 37.8, lng: -122.4 },
-  { id: 'radio-20', name: 'WWOZ New Orleans', country: 'USA', region: 'North America', streamUrl: 'https://playerservices.streamtheworld.com/api/livestream-redirect/WWOZFM.mp3', language: 'English', type: 'music', lat: 30.0, lng: -90.1 },
-  { id: 'radio-21', name: 'SomaFM Space Station', country: 'USA', region: 'North America', streamUrl: 'https://ice1.somafm.com/spacestation-128-mp3', language: 'English', type: 'music', lat: 37.8, lng: -122.4 },
   { id: 'radio-22', name: 'SomaFM Mission Control', country: 'USA', region: 'North America', streamUrl: 'https://ice1.somafm.com/missioncontrol-128-mp3', language: 'English', type: 'government', lat: 37.8, lng: -122.4 },
   { id: 'radio-23', name: 'Classic FM (UK)', country: 'UK', region: 'Europe', streamUrl: 'https://media-ice.musicradio.com/ClassicFMMP3', language: 'English', type: 'music', lat: 51.5, lng: -0.1 },
   { id: 'radio-24', name: 'Radio Swiss Jazz', country: 'Switzerland', region: 'Europe', streamUrl: 'https://stream.srg-ssr.ch/m/rsj/mp3_128', language: 'English', type: 'music', lat: 46.9, lng: 7.4 },

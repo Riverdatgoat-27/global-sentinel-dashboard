@@ -4,7 +4,7 @@ import { OrbitControls, Stars } from '@react-three/drei';
 import * as THREE from 'three';
 import EarthMesh from './EarthMesh';
 import GlobeMarkers from './GlobeMarkers';
-import type { GlobeEvent, CyberThreat, AircraftState, SatelliteData, ShipData, LayerVisibility, MissileEvent, InfrastructurePoint, MarineAnimal } from '@/types/intelligence';
+import type { GlobeEvent, CyberThreat, AircraftState, SatelliteData, ShipData, LayerVisibility, MissileEvent, InfrastructurePoint, MarineAnimal, CCTVCamera } from '@/types/intelligence';
 import type { SelectedAsset } from '@/components/dashboard/AssetDetailPanel';
 
 interface Props {
@@ -17,9 +17,11 @@ interface Props {
   missiles: MissileEvent[];
   infrastructure: InfrastructurePoint[];
   marineAnimals: MarineAnimal[];
+  cctvCameras?: CCTVCamera[];
   layers: LayerVisibility;
   onSelectEvent?: (event: GlobeEvent | null) => void;
   onSelectAsset?: (asset: SelectedAsset) => void;
+  onSelectCamera?: (camera: CCTVCamera) => void;
 }
 
 export interface GlobeControlHandle {
@@ -28,7 +30,6 @@ export interface GlobeControlHandle {
   zoomOut: () => void;
 }
 
-// Converts lat/lng to 3D position on sphere
 function latLngToCamera(lat: number, lng: number, distance: number): [number, number, number] {
   const phi = (90 - lat) * (Math.PI / 180);
   const theta = (lng + 180) * (Math.PI / 180);
@@ -39,7 +40,6 @@ function latLngToCamera(lat: number, lng: number, distance: number): [number, nu
   ];
 }
 
-// Internal component to access Three.js context
 function GlobeController({ controlRef }: { controlRef: React.MutableRefObject<any> }) {
   const { camera } = useThree();
 
@@ -47,13 +47,12 @@ function GlobeController({ controlRef }: { controlRef: React.MutableRefObject<an
     navigateTo: (lat: number, lng: number, zoom?: number) => {
       const dist = zoom ? Math.max(3, Math.min(12, 12 - zoom)) : camera.position.length();
       const [x, y, z] = latLngToCamera(lat, lng, dist);
-      // Smooth animate
       const start = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
       const duration = 1500;
       const startTime = Date.now();
       const animate = () => {
         const t = Math.min(1, (Date.now() - startTime) / duration);
-        const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // easeInOut
+        const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
         camera.position.set(
           start.x + (x - start.x) * ease,
           start.y + (y - start.y) * ease,
@@ -79,18 +78,19 @@ function GlobeController({ controlRef }: { controlRef: React.MutableRefObject<an
   return null;
 }
 
-function ClickHandler({ aircraft, ships, satellites, cyberThreats, onSelectAsset }: {
+function ClickHandler({ aircraft, ships, satellites, cyberThreats, cctvCameras, onSelectAsset, onSelectCamera }: {
   aircraft: AircraftState[];
   ships: ShipData[];
   satellites: SatelliteData[];
   cyberThreats: CyberThreat[];
+  cctvCameras?: CCTVCamera[];
   onSelectAsset?: (asset: SelectedAsset) => void;
+  onSelectCamera?: (camera: CCTVCamera) => void;
 }) {
   const { camera, gl } = useThree();
   const raycaster = useRef(new THREE.Raycaster());
 
   const handleClick = useCallback((event: MouseEvent) => {
-    if (!onSelectAsset) return;
     const rect = gl.domElement.getBoundingClientRect();
     const mouse = new THREE.Vector2(
       ((event.clientX - rect.left) / rect.width) * 2 - 1,
@@ -112,6 +112,17 @@ function ClickHandler({ aircraft, ships, satellites, cyberThreats, onSelectAsset
     const lat = 90 - Math.acos(hitPoint.y / r) * (180 / Math.PI);
     const lng = Math.atan2(hitPoint.z, -hitPoint.x) * (180 / Math.PI) - 180;
     const normLng = ((lng + 540) % 360) - 180;
+
+    // Check CCTV cameras first (smaller threshold = higher priority)
+    if (cctvCameras && onSelectCamera) {
+      let bestCamDist = 3;
+      let bestCam: CCTVCamera | null = null;
+      cctvCameras.forEach(cam => {
+        const d = Math.sqrt(Math.pow(cam.lat - lat, 2) + Math.pow(cam.lng - normLng, 2));
+        if (d < bestCamDist) { bestCamDist = d; bestCam = cam; }
+      });
+      if (bestCam) { onSelectCamera(bestCam); return; }
+    }
 
     let bestDist = 5;
     let bestAsset: SelectedAsset = null;
@@ -136,8 +147,8 @@ function ClickHandler({ aircraft, ships, satellites, cyberThreats, onSelectAsset
       if (d < bestDist) { bestDist = d; bestAsset = { type: 'cyber', data: ct }; }
     });
 
-    onSelectAsset(bestAsset);
-  }, [aircraft, ships, satellites, cyberThreats, camera, gl, onSelectAsset]);
+    onSelectAsset?.(bestAsset);
+  }, [aircraft, ships, satellites, cyberThreats, cctvCameras, camera, gl, onSelectAsset, onSelectCamera]);
 
   gl.domElement.onclick = handleClick;
   return null;
@@ -173,7 +184,9 @@ const IntelGlobe = forwardRef<GlobeControlHandle, Props>((props, ref) => {
             ships={props.ships}
             satellites={props.satellites}
             cyberThreats={props.cyberThreats}
+            cctvCameras={props.cctvCameras}
             onSelectAsset={props.onSelectAsset}
+            onSelectCamera={props.onSelectCamera}
           />
           <GlobeController controlRef={controlRef} />
         </Suspense>

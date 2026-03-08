@@ -1,7 +1,7 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { GlobeEvent, CyberThreat, AircraftState, SatelliteData, ShipData, MissileEvent, InfrastructurePoint, MarineAnimal } from '@/types/intelligence';
+import type { GlobeEvent, CyberThreat, AircraftState, SatelliteData, ShipData, MissileEvent, InfrastructurePoint, MarineAnimal, CCTVCamera } from '@/types/intelligence';
 
 interface Props {
   earthquakes: GlobeEvent[];
@@ -13,6 +13,7 @@ interface Props {
   missiles?: MissileEvent[];
   infrastructure?: InfrastructurePoint[];
   marineAnimals?: MarineAnimal[];
+  cctvCameras?: CCTVCamera[];
   layers: {
     earthquakes: boolean;
     cyberAttacks: boolean;
@@ -382,6 +383,29 @@ function InfrastructureMarkers({ points }: { points: InfrastructurePoint[] }) {
   return <group ref={groupRef} />;
 }
 
+// CCTV Camera markers 📹
+function CCTVMarkers({ cameras }: { cameras: CCTVCamera[] }) {
+  const groupRef = useRef<THREE.Group>(null);
+
+  useFrame(() => {
+    if (!groupRef.current) return;
+    while (groupRef.current.children.length > 0) {
+      groupRef.current.remove(groupRef.current.children[0]);
+    }
+
+    cameras.forEach((cam) => {
+      const pos = latLngToVector3(cam.lat, cam.lng, 2.012);
+      const sprite = createEmojiSprite('📹', 0.05);
+      sprite.position.copy(pos);
+      sprite.userData = { type: 'cctv', data: cam };
+      groupRef.current!.add(sprite);
+    });
+  });
+
+  if (cameras.length === 0) return null;
+  return <group ref={groupRef} />;
+}
+
 export default function GlobeMarkers(props: Props) {
   const earthquakePositions = useMemo(() => props.earthquakes.map(e => ({ lat: e.lat, lng: e.lng })), [props.earthquakes]);
   const militaryPositions = useMemo(() => props.militaryEvents.map(e => ({ lat: e.lat, lng: e.lng })), [props.militaryEvents]);
@@ -397,6 +421,7 @@ export default function GlobeMarkers(props: Props) {
       {props.layers.missiles && props.missiles && <MissileArcs missiles={props.missiles} />}
       {props.layers.infrastructure && props.infrastructure && <InfrastructureMarkers points={props.infrastructure} />}
       {props.layers.marineAnimals && props.marineAnimals && <MarineAnimalMarkers animals={props.marineAnimals} />}
+      {props.cctvCameras && <CCTVMarkers cameras={props.cctvCameras} />}
     </group>
   );
 }

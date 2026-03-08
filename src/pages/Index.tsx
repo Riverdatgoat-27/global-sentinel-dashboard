@@ -14,13 +14,14 @@ import TimelineSlider from '@/components/dashboard/TimelineSlider';
 import AssetDetailPanel, { type SelectedAsset } from '@/components/dashboard/AssetDetailPanel';
 import NexusAI, { type CortanaAction } from '@/components/dashboard/NexusAI';
 import LiveInfoTicker from '@/components/dashboard/LiveInfoTicker';
+import CCTVViewer from '@/components/dashboard/CCTVViewer';
 import IntelGlobe, { type GlobeControlHandle } from '@/components/globe/IntelGlobe';
 import { useEarthquakeData } from '@/hooks/useEarthquakeData';
 import { useAircraftData } from '@/hooks/useAircraftData';
 import { useSimulatedData } from '@/hooks/useSimulatedData';
 import { useGDELTData } from '@/hooks/useGDELTData';
-import { infrastructurePoints } from '@/data/mockData';
-import type { LayerVisibility } from '@/types/intelligence';
+import { infrastructurePoints, cctvCameras } from '@/data/mockData';
+import type { LayerVisibility, CCTVCamera } from '@/types/intelligence';
 
 const REGION_COORDS: Record<string, { lat: number; lng: number }> = {
   europe: { lat: 50, lng: 10 },
@@ -29,6 +30,17 @@ const REGION_COORDS: Record<string, { lat: number; lng: number }> = {
   africa: { lat: 5, lng: 25 },
   middle_east: { lat: 28, lng: 45 },
   pacific: { lat: -10, lng: 170 },
+  russia: { lat: 55, lng: 37 },
+  china: { lat: 35, lng: 105 },
+  india: { lat: 20, lng: 79 },
+  japan: { lat: 36, lng: 138 },
+  australia: { lat: -25, lng: 134 },
+  iran: { lat: 32, lng: 53 },
+  ukraine: { lat: 48, lng: 31 },
+  israel: { lat: 31, lng: 35 },
+  north_korea: { lat: 40, lng: 127 },
+  south_korea: { lat: 36, lng: 128 },
+  taiwan: { lat: 24, lng: 121 },
 };
 
 const Index = () => {
@@ -52,6 +64,7 @@ const Index = () => {
 
   const [bottomTab, setBottomTab] = useState<'financial' | 'cctv' | 'video' | 'radio'>('financial');
   const [selectedAsset, setSelectedAsset] = useState<SelectedAsset>(null);
+  const [selectedCamera, setSelectedCamera] = useState<CCTVCamera | null>(null);
 
   const toggleLayer = useCallback((layer: keyof LayerVisibility) => {
     setLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
@@ -61,6 +74,11 @@ const Index = () => {
     if (command === 'cctv') setBottomTab('cctv');
     else if (command === 'financial') setBottomTab('financial');
     else if (command === 'radio') setBottomTab('radio');
+  }, []);
+
+  const handleCameraSelect = useCallback((camera: CCTVCamera) => {
+    setSelectedCamera(camera);
+    globeRef.current?.navigateTo(camera.lat, camera.lng, 7);
   }, []);
 
   // Handle Cortana AI actions
@@ -105,7 +123,6 @@ const Index = () => {
         }
         break;
       case 'show_alerts':
-        // Already visible in alert panel
         break;
       case 'zoom_in':
         globeRef.current?.zoomIn();
@@ -114,7 +131,8 @@ const Index = () => {
         globeRef.current?.zoomOut();
         break;
       case 'rotate_to': {
-        const coords = REGION_COORDS[action.region || ''];
+        const region = (action.region || '').toLowerCase().replace(/\s+/g, '_');
+        const coords = REGION_COORDS[region];
         if (coords) globeRef.current?.navigateTo(coords.lat, coords.lng, 5);
         break;
       }
@@ -170,10 +188,17 @@ const Index = () => {
               missiles={missiles}
               infrastructure={infrastructurePoints}
               marineAnimals={marineAnimals}
+              cctvCameras={cctvCameras}
               layers={layers}
               onSelectAsset={setSelectedAsset}
+              onSelectCamera={handleCameraSelect}
             />
             <AssetDetailPanel asset={selectedAsset} onClose={() => setSelectedAsset(null)} />
+
+            {/* CCTV Viewer overlay */}
+            {selectedCamera && (
+              <CCTVViewer camera={selectedCamera} onClose={() => setSelectedCamera(null)} />
+            )}
 
             {/* Stats bar */}
             <div className="absolute bottom-2 left-2 right-2 flex gap-1.5 z-10">
@@ -183,7 +208,7 @@ const Index = () => {
                 { label: 'AIRCRAFT', value: aircraft.length, color: 'text-neon-cyan' },
                 { label: 'GDELT', value: gdeltEvents.length, color: 'text-primary' },
                 { label: 'THREATS', value: cyberThreats.length + missiles.length, color: 'text-neon-red' },
-                { label: 'WILDLIFE', value: marineAnimals.length, color: 'text-neon-green' },
+                { label: 'CCTV', value: cctvCameras.length, color: 'text-neon-green' },
               ].map(stat => (
                 <div key={stat.label} className="bg-card/80 backdrop-blur-sm border border-border/50 px-2 py-1 rounded text-[8px] flex items-center gap-1.5">
                   <span className="text-muted-foreground font-mono">{stat.label}</span>

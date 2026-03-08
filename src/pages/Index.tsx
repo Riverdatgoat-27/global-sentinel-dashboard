@@ -37,7 +37,6 @@ const REGION_COORDS: Record<string, { lat: number; lng: number }> = {
   south_korea: { lat: 36, lng: 128 }, taiwan: { lat: 24, lng: 121 },
 };
 
-// Siren audio context
 let sirenCtx: AudioContext | null = null;
 function playSiren() {
   try {
@@ -47,9 +46,8 @@ function playSiren() {
     osc.connect(gain);
     gain.connect(sirenCtx.destination);
     osc.type = 'sawtooth';
-    gain.gain.setValueAtTime(0.15, sirenCtx.currentTime);
+    gain.gain.setValueAtTime(0.12, sirenCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, sirenCtx.currentTime + 2);
-    // Siren sweep
     osc.frequency.setValueAtTime(400, sirenCtx.currentTime);
     osc.frequency.linearRampToValueAtTime(800, sirenCtx.currentTime + 0.5);
     osc.frequency.linearRampToValueAtTime(400, sirenCtx.currentTime + 1);
@@ -57,7 +55,7 @@ function playSiren() {
     osc.frequency.linearRampToValueAtTime(400, sirenCtx.currentTime + 2);
     osc.start(sirenCtx.currentTime);
     osc.stop(sirenCtx.currentTime + 2);
-  } catch { /* audio not available */ }
+  } catch {}
 }
 
 const Index = () => {
@@ -81,7 +79,6 @@ const Index = () => {
   const [selectedCamera, setSelectedCamera] = useState<CCTVCamera | null>(null);
   const [sirenAlert, setSirenAlert] = useState<AlertNotification | null>(null);
 
-  // Siren for new critical alerts
   useEffect(() => {
     const criticals = alerts.filter(a => a.severity === 'critical' && !a.acknowledged);
     if (criticals.length > prevAlertCount.current && prevAlertCount.current > 0) {
@@ -163,18 +160,17 @@ const Index = () => {
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-background">
       <ThreatStatusBar />
 
-      {/* Siren Alert Banner */}
       {sirenAlert && (
-        <div className="bg-destructive/90 text-destructive-foreground px-4 py-1.5 flex items-center gap-2 animate-pulse z-50">
-          <span className="text-lg">🚨</span>
-          <span className="text-[11px] font-mono font-bold uppercase tracking-wider flex-1">{sirenAlert.title}</span>
-          <button onClick={() => setSirenAlert(null)} className="text-[10px] font-mono px-2 py-0.5 rounded border border-destructive-foreground/30 hover:bg-destructive-foreground/10">DISMISS</button>
+        <div className="bg-destructive/90 text-destructive-foreground px-4 py-1 flex items-center gap-2 animate-pulse z-50">
+          <span className="text-sm">🚨</span>
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider flex-1">{sirenAlert.title}</span>
+          <button onClick={() => setSirenAlert(null)} className="text-[9px] font-mono px-2 py-0.5 rounded border border-destructive-foreground/30 hover:bg-destructive-foreground/10">DISMISS</button>
         </div>
       )}
 
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel */}
-        <div className="w-60 shrink-0 border-r border-border flex flex-col">
+        <div className="w-56 shrink-0 border-r border-border flex flex-col">
           <div className="flex-1 overflow-hidden flex flex-col">
             <div className="flex border-b border-border bg-card/50">
               {(['intel', 'wars', 'news'] as const).map(t => (
@@ -192,7 +188,7 @@ const Index = () => {
               {leftTab === 'news' && <NewsFeedPanel news={news} loading={newsLoading} onRefresh={refetchNews} />}
             </div>
           </div>
-          <div className="h-44 shrink-0 border-t border-border overflow-hidden">
+          <div className="h-40 shrink-0 border-t border-border overflow-hidden">
             <AlertPanel alerts={alerts} onAcknowledge={acknowledgeAlert} />
           </div>
         </div>
@@ -223,19 +219,18 @@ const Index = () => {
             {selectedCamera && <CCTVViewer camera={selectedCamera} onClose={() => setSelectedCamera(null)} />}
 
             {/* Stats bar */}
-            <div className="absolute bottom-2 left-2 right-2 flex gap-1.5 z-10 flex-wrap">
+            <div className="absolute bottom-1.5 left-1.5 right-1.5 flex gap-1 z-10 flex-wrap">
               {[
                 { label: 'FEEDS', value: Object.values(counts).reduce((a, b) => a + b, 0), color: 'text-foreground' },
                 { label: 'USGS', value: earthquakes.length, color: 'text-neon-amber' },
-                { label: 'AIRCRAFT', value: aircraft.length, color: 'text-neon-cyan' },
+                { label: 'AIR', value: aircraft.length, color: 'text-neon-cyan' },
                 { label: 'SHIPS', value: ships.length, color: 'text-neon-cyan' },
                 { label: 'SUBS', value: submarines.length, color: 'text-neon-red' },
-                { label: 'MISSILES', value: missiles.length, color: 'text-neon-red' },
-                { label: 'THREATS', value: cyberThreats.length, color: 'text-neon-amber' },
+                { label: 'MSL', value: missiles.length, color: 'text-neon-red' },
+                { label: 'CYBER', value: cyberThreats.length, color: 'text-neon-amber' },
                 { label: 'WARS', value: conflicts.length, color: 'text-neon-red' },
-                { label: 'NEWS', value: news.length, color: 'text-primary' },
               ].map(stat => (
-                <div key={stat.label} className="bg-card/80 backdrop-blur-sm border border-border/50 px-2 py-1 rounded text-[8px] flex items-center gap-1.5">
+                <div key={stat.label} className="bg-card/80 backdrop-blur-sm border border-border/50 px-1.5 py-0.5 rounded text-[7px] flex items-center gap-1">
                   <span className="text-muted-foreground font-mono">{stat.label}</span>
                   <span className={`${stat.color} font-mono font-semibold`}>{stat.value}</span>
                 </div>
@@ -246,18 +241,18 @@ const Index = () => {
           <TimelineSlider />
 
           {/* Bottom panels */}
-          <div className="h-44 shrink-0 flex flex-col border-t border-border">
+          <div className="h-40 shrink-0 flex flex-col border-t border-border">
             <div className="flex border-b border-border bg-card/50 overflow-x-auto">
               {([
                 { key: 'financial', label: '💰 MARKETS' },
                 { key: 'cctv', label: '📹 CCTV' },
                 { key: 'video', label: '📺 INTEL' },
-                { key: 'radio', label: '📡 SCANNER' },
+                { key: 'radio', label: '📡 RADIO' },
                 { key: 'nuclear', label: '☢️ NUCLEAR' },
                 { key: 'economics', label: '📊 ECON' },
               ] as const).map(tab => (
                 <button key={tab.key} onClick={() => setBottomTab(tab.key)}
-                  className={`px-3 py-1.5 text-[9px] font-mono tracking-wider uppercase transition-all whitespace-nowrap ${
+                  className={`px-2.5 py-1 text-[8px] font-mono tracking-wider uppercase transition-all whitespace-nowrap ${
                     bottomTab === tab.key ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-muted-foreground hover:text-foreground hover:bg-muted/20'
                   }`}>
                   {tab.label}
@@ -281,7 +276,7 @@ const Index = () => {
         </div>
 
         {/* Right Panel */}
-        <div className="w-68 shrink-0 border-l border-border flex flex-col" style={{ width: '272px' }}>
+        <div className="w-64 shrink-0 border-l border-border flex flex-col">
           <div className="flex-1 border-b border-border overflow-hidden">
             <CyberAttackMonitor threats={cyberThreats} />
           </div>

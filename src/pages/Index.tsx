@@ -67,6 +67,7 @@ const Index = () => {
   });
 
   const [bottomTab, setBottomTab] = useState<'financial' | 'cctv' | 'video' | 'radio'>('financial');
+  const [leftTab, setLeftTab] = useState<'intel' | 'wars' | 'news'>('intel');
   const [selectedAsset, setSelectedAsset] = useState<SelectedAsset>(null);
   const [selectedCamera, setSelectedCamera] = useState<CCTVCamera | null>(null);
 

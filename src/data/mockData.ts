@@ -74,12 +74,16 @@ export const infrastructurePoints: InfrastructurePoint[] = [
 ];
 
 export const cctvCameras: CCTVCamera[] = [
-  { id: 'cam-1', name: 'Times Square NYC', location: 'New York, USA', url: 'https://www.earthcam.com/usa/newyork/timessquare/', thumbnailUrl: '', type: 'city', country: 'USA', lat: 40.76, lng: -73.98 },
-  { id: 'cam-2', name: 'Shibuya Crossing', location: 'Tokyo, Japan', url: 'https://www.earthcam.com/world/japan/tokyo/shibuya/', thumbnailUrl: '', type: 'city', country: 'Japan', lat: 35.66, lng: 139.70 },
-  { id: 'cam-3', name: 'Abbey Road', location: 'London, UK', url: 'https://www.earthcam.com/world/england/london/abbeyroad/', thumbnailUrl: '', type: 'city', country: 'UK', lat: 51.53, lng: -0.18 },
-  { id: 'cam-4', name: 'Port of LA', location: 'Los Angeles, USA', url: 'https://www.portoflosangeles.org/webcam', thumbnailUrl: '', type: 'port', country: 'USA', lat: 33.74, lng: -118.27 },
-  { id: 'cam-5', name: 'Miami Beach', location: 'Miami, USA', url: 'https://www.earthcam.com/usa/florida/miamibeach/', thumbnailUrl: '', type: 'city', country: 'USA', lat: 25.79, lng: -80.13 },
-  { id: 'cam-6', name: 'I-95 Traffic Cam', location: 'Washington DC, USA', url: '', thumbnailUrl: '', type: 'traffic', country: 'USA', lat: 38.91, lng: -77.02 },
+  { id: 'cam-1', name: 'Times Square NYC', location: 'New York, USA', url: 'AdUw5RdyZxI', thumbnailUrl: '', type: 'city', country: 'USA', lat: 40.76, lng: -73.98 },
+  { id: 'cam-2', name: 'Shibuya Crossing', location: 'Tokyo, Japan', url: 'DjYZk8nrXVY', thumbnailUrl: '', type: 'city', country: 'Japan', lat: 35.66, lng: 139.70 },
+  { id: 'cam-3', name: 'Abbey Road London', location: 'London, UK', url: 'Y87VCkoqNKU', thumbnailUrl: '', type: 'city', country: 'UK', lat: 51.53, lng: -0.18 },
+  { id: 'cam-4', name: 'Port of LA', location: 'Los Angeles, USA', url: '1NdFfMLRGNw', thumbnailUrl: '', type: 'port', country: 'USA', lat: 33.74, lng: -118.27 },
+  { id: 'cam-5', name: 'Miami Beach', location: 'Miami, USA', url: '2DC9xXSIDhI', thumbnailUrl: '', type: 'city', country: 'USA', lat: 25.79, lng: -80.13 },
+  { id: 'cam-6', name: 'ISS Earth View', location: 'Low Earth Orbit', url: 'xRPTBhmcyXY', thumbnailUrl: '', type: 'weather', country: 'Intl', lat: 0.0, lng: 0.0 },
+  { id: 'cam-7', name: 'Jackson Hole WY', location: 'Wyoming, USA', url: 'DoGXOP1FMbE', thumbnailUrl: '', type: 'city', country: 'USA', lat: 43.48, lng: -110.76 },
+  { id: 'cam-8', name: 'Venice Beach LA', location: 'Los Angeles, USA', url: 'ZIvLTIBbpLQ', thumbnailUrl: '', type: 'city', country: 'USA', lat: 33.99, lng: -118.47 },
+  { id: 'cam-9', name: 'Dublin City', location: 'Dublin, Ireland', url: 'LCvW29tHYKA', thumbnailUrl: '', type: 'city', country: 'Ireland', lat: 53.35, lng: -6.26 },
+  { id: 'cam-10', name: 'Bosphorus Istanbul', location: 'Istanbul, Turkey', url: 'cKLcmJZo8Qg', thumbnailUrl: '', type: 'port', country: 'Turkey', lat: 41.01, lng: 29.00 },
 ];
 
 export const videoIntel: VideoIntel[] = [

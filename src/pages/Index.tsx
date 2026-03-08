@@ -157,6 +157,7 @@ const Index = () => {
         {/* Center */}
         <div className="flex-1 flex flex-col relative">
           <div className="flex-1 relative">
+            <LiveInfoTicker aircraft={aircraft} alerts={alerts} gdeltEvents={gdeltEvents} />
             <LayerControls layers={layers} onToggle={toggleLayer} counts={counts} />
             <IntelGlobe
               ref={globeRef}

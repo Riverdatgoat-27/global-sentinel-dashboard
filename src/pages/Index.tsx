@@ -13,6 +13,7 @@ import RadioScanner from '@/components/dashboard/RadioScanner';
 import TimelineSlider from '@/components/dashboard/TimelineSlider';
 import AssetDetailPanel, { type SelectedAsset } from '@/components/dashboard/AssetDetailPanel';
 import NexusAI, { type CortanaAction } from '@/components/dashboard/NexusAI';
+import LiveInfoTicker from '@/components/dashboard/LiveInfoTicker';
 import IntelGlobe, { type GlobeControlHandle } from '@/components/globe/IntelGlobe';
 import { useEarthquakeData } from '@/hooks/useEarthquakeData';
 import { useAircraftData } from '@/hooks/useAircraftData';

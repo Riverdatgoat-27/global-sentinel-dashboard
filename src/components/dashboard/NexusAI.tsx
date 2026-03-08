@@ -520,8 +520,9 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
     }, SILENCE_TIMEOUT);
   }, [activated, processCommand]);
 
-  // Voice recognition
+  // Voice recognition - always listening mode
   const startListening = useCallback(() => {
+    if (listeningRef.current) return;
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) return;
     const recognition = new SR();
@@ -539,7 +540,12 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
       setTranscript(full);
 
       if (full.includes(WAKE_WORD) || activated) {
-        const commandPart = full.replace(WAKE_WORD, '').trim();
+        // Extract command after wake word
+        let commandPart = full;
+        const wakeIdx = full.indexOf(WAKE_WORD);
+        if (wakeIdx >= 0) {
+          commandPart = full.substring(wakeIdx + WAKE_WORD.length).trim();
+        }
 
         if (!activated && full.includes(WAKE_WORD)) {
           setActivated(true);
@@ -549,7 +555,8 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
             setSpeaking(true);
             speak("I'm here, General.", () => setSpeaking(false));
           }
-          setAiResponse("Listening... I'll process your command after you finish speaking.");
+          setAiResponse("Listening... speak your command.");
+          // If command already present after wake word, start timer
           if (commandPart.length > 3) {
             resetSilenceTimer(commandPart);
           }
@@ -559,12 +566,26 @@ export default function NexusAI({ alerts, onCommand, onAction, getContext }: Pro
       }
     };
 
-    recognition.onerror = () => setListening(false);
-    recognition.onend = () => { if (listening) try { recognition.start(); } catch {} };
+    recognition.onerror = (e: any) => {
+      if (e.error !== 'no-speech') {
+        setListening(false);
+        listeningRef.current = false;
+      }
+    };
+    recognition.onend = () => {
+      // Auto-restart if we should still be listening
+      if (listeningRef.current) {
+        try { recognition.start(); } catch {}
+      }
+    };
 
     recognitionRef.current = recognition;
-    try { recognition.start(); setListening(true); } catch {}
-  }, [activated, muted, listening, resetSilenceTimer]);
+    try {
+      recognition.start();
+      setListening(true);
+      listeningRef.current = true;
+    } catch {}
+  }, [activated, muted, resetSilenceTimer]);
 
   const stopListening = useCallback(() => {
     setListening(false);

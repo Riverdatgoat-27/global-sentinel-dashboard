@@ -105,18 +105,17 @@ export default function RadioScanner() {
       return;
     }
 
-    // Create and play audio immediately in user gesture context
-    const audio = new Audio();
+    // Create Audio element immediately in user gesture context
+    const audio = new Audio(station.streamUrl);
     audio.preload = 'auto';
+    // Do NOT set crossOrigin - radio streams typically don't support CORS
+    // and setting it causes them to fail
     audioRef.current = audio;
 
-    // Unlock audio context first
-    audio.play().catch(() => {});
-    audio.pause();
-
-    // Now set source and play
-    audio.src = station.streamUrl;
-    audio.crossOrigin = 'anonymous';
+    audio.onerror = () => {
+      setIsPlaying(false);
+      setAudioError('Stream connection failed. The station may be offline.');
+    };
 
     audio.play()
       .then(() => {
@@ -126,13 +125,8 @@ export default function RadioScanner() {
       .catch((err) => {
         console.error('Audio play error:', err);
         setIsPlaying(false);
-        setAudioError('Stream unavailable or blocked by browser. Try another station.');
+        setAudioError('Stream may be unavailable. Some streams require direct access.');
       });
-
-    audio.onerror = () => {
-      setIsPlaying(false);
-      setAudioError('Stream connection failed. The station may be offline.');
-    };
   };
 
   const hasStream = (station: RadioStation) => !!station.streamUrl;

@@ -190,7 +190,7 @@ export function useSimulatedData() {
 
   useEffect(() => {
     setSubmarines(generateSubmarines());
-    const interval = setInterval(() => setSubmarines(prev => moveSubmarines(prev)), 4000);
+    const interval = setInterval(() => setSubmarines(prev => moveSubmarines(prev)), 1500);
     return () => clearInterval(interval);
   }, []);
 

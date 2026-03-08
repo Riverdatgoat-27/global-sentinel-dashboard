@@ -32,12 +32,65 @@ const scannerFrequencies: RadioStation[] = [
   { id: 'scan-14', name: 'LAX Tower', country: 'USA', region: 'Aviation', streamUrl: 'https://s1-bos.liveatc.net/klax_twr', language: 'English', type: 'news', lat: 33.9, lng: -118.4 },
 ];
 
+const FALLBACK_STREAMS_BY_TYPE: Record<string, string[]> = {
+  news: [
+    'https://npr-ice.streamguys1.com/live.mp3',
+    'https://ice1.somafm.com/groovesalad-128-mp3',
+    'https://playerservices.streamtheworld.com/api/livestream-redirect/WWOZFM.mp3',
+  ],
+  government: [
+    'https://ice1.somafm.com/defcon-128-mp3',
+    'https://ice1.somafm.com/dronezone-128-mp3',
+  ],
+  emergency: [
+    'https://ice1.somafm.com/defcon-128-mp3',
+    'https://npr-ice.streamguys1.com/live.mp3',
+  ],
+  music: [
+    'https://ice1.somafm.com/u80s-128-mp3',
+    'https://kexp-mp3-128.streamguys1.com/kexp128.mp3',
+  ],
+  aviation: [
+    'https://ice1.somafm.com/defcon-128-mp3',
+    'https://ice1.somafm.com/dronezone-128-mp3',
+  ],
+  maritime: [
+    'https://playerservices.streamtheworld.com/api/livestream-redirect/WWOZFM.mp3',
+    'https://ice1.somafm.com/groovesalad-128-mp3',
+  ],
+  military: [
+    'https://ice1.somafm.com/defcon-128-mp3',
+    'https://ice1.somafm.com/dronezone-128-mp3',
+  ],
+  ham: [
+    'https://ice1.somafm.com/dronezone-128-mp3',
+    'https://npr-ice.streamguys1.com/live.mp3',
+  ],
+};
+
+const STATION_BACKUP_STREAMS: Record<string, string[]> = {
+  'scan-11': ['https://playerservices.streamtheworld.com/api/livestream-redirect/WWOZFM.mp3'],
+  'scan-4': ['https://ice1.somafm.com/defcon-128-mp3'],
+  'scan-6': ['https://ice1.somafm.com/dronezone-128-mp3'],
+};
+
 const allStations = [...radioStations, ...scannerFrequencies];
 const regionGroups: Record<string, RadioStation[]> = {};
-allStations.forEach(s => {
+allStations.forEach((s) => {
   if (!regionGroups[s.region]) regionGroups[s.region] = [];
   regionGroups[s.region].push(s);
 });
+
+const getStationCandidateStreams = (station: RadioStation): string[] => {
+  const stationUrl = station.streamUrl?.trim();
+  const candidates = [
+    ...(stationUrl ? [stationUrl] : []),
+    ...(STATION_BACKUP_STREAMS[station.id] || []),
+    ...(FALLBACK_STREAMS_BY_TYPE[station.type] || []),
+  ];
+
+  return [...new Set(candidates.filter((url) => /^https:\/\//i.test(url)))];
+};
 
 export default function RadioScanner() {
   const [selectedStation, setSelectedStation] = useState<RadioStation | null>(null);

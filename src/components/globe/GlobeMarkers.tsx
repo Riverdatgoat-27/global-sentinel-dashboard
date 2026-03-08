@@ -1,7 +1,7 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { GlobeEvent, CyberThreat, AircraftState, SatelliteData, ShipData, MissileEvent, InfrastructurePoint, MarineAnimal, CCTVCamera } from '@/types/intelligence';
+import type { GlobeEvent, CyberThreat, AircraftState, SatelliteData, ShipData, MissileEvent, InfrastructurePoint, MarineAnimal, CCTVCamera, SubmarineData } from '@/types/intelligence';
 
 interface Props {
   earthquakes: GlobeEvent[];

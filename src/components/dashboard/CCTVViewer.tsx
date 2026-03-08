@@ -3,16 +3,6 @@ import { motion } from 'framer-motion';
 import { Camera, X, Maximize2, Minimize2, MapPin } from 'lucide-react';
 import type { CCTVCamera } from '@/types/intelligence';
 
-// Map camera IDs to YouTube embed IDs for live streams
-const CAMERA_STREAMS: Record<string, string> = {
-  'cam-1': 'AdUw5RdyZxI',  // Times Square
-  'cam-2': 'DjYZk8nrXVY',  // Shibuya / Tokyo
-  'cam-3': 'Y87VCkoqNKU',  // Dublin / Abbey Road area
-  'cam-4': '1NdFfMLRGNw',  // Port of LA
-  'cam-5': '2DC9xXSIDhI',  // Miami Beach
-  'cam-6': 'xRPTBhmcyXY',  // ISS / DC traffic
-};
-
 interface Props {
   camera: CCTVCamera;
   onClose: () => void;
@@ -20,7 +10,8 @@ interface Props {
 
 export default function CCTVViewer({ camera, onClose }: Props) {
   const [expanded, setExpanded] = useState(false);
-  const embedId = CAMERA_STREAMS[camera.id];
+  // camera.url now stores YouTube embed IDs directly
+  const embedId = camera.url;
 
   return (
     <motion.div

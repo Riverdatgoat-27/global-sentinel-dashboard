@@ -12,8 +12,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        mono: ["JetBrains Mono", "monospace"],
-        display: ["Orbitron", "sans-serif"],
+        mono: ["IBM Plex Mono", "monospace"],
+        display: ["IBM Plex Mono", "monospace"],
+        sans: ["Inter", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

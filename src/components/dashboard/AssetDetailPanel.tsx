@@ -15,19 +15,32 @@ interface Props {
   onClose: () => void;
 }
 
-const aviationFrequencies: Record<string, { freq: string; name: string }[]> = {
-  UAL: [{ freq: '128.825', name: 'United Ops' }],
-  BAW: [{ freq: '131.725', name: 'Speedbird Ops' }],
-  DLH: [{ freq: '131.125', name: 'Lufthansa Ops' }],
-  AAL: [{ freq: '129.125', name: 'American Ops' }],
-  DAL: [{ freq: '130.025', name: 'Delta Ops' }],
-  SWR: [{ freq: '136.025', name: 'Swiss Ops' }],
-  AFR: [{ freq: '131.725', name: 'Air France Ops' }],
-  RCH: [{ freq: '311.000', name: 'USAF REACH' }, { freq: '243.000', name: 'Military Guard' }],
-  RRR: [{ freq: '243.000', name: 'RAF Ops' }],
-  SAM: [{ freq: '243.000', name: 'SAM Ops' }, { freq: '121.500', name: 'VHF Guard' }],
-};
+// Real live ATC / aviation scanner streams
+const aviationStreams: { freq: string; name: string; streamUrl: string }[] = [
+  { freq: '118.700 MHz', name: 'JFK Tower', streamUrl: 'https://s1-bos.liveatc.net/kjfk_twr' },
+  { freq: '127.400 MHz', name: 'LAX Approach', streamUrl: 'https://s1-bos.liveatc.net/klax_app_s' },
+  { freq: '119.100 MHz', name: 'Chicago O\'Hare Tower', streamUrl: 'https://s1-bos.liveatc.net/kord_twr' },
+  { freq: '124.350 MHz', name: 'London Heathrow', streamUrl: 'https://s1-bos.liveatc.net/egll_s_app' },
+  { freq: '120.500 MHz', name: 'Atlanta Tower', streamUrl: 'https://s1-bos.liveatc.net/katl_twr' },
+];
 
+// Military / government scanner streams (Broadcastify public feeds)
+const militaryStreams: { freq: string; name: string; streamUrl: string }[] = [
+  { freq: '311.000 MHz', name: 'USAF Global HF', streamUrl: 'https://broadcastify.cdnstream1.com/14747' },
+  { freq: '243.000 MHz', name: 'Military Guard UHF', streamUrl: 'https://broadcastify.cdnstream1.com/14748' },
+  { freq: '255.400 MHz', name: 'Edwards AFB', streamUrl: 'https://broadcastify.cdnstream1.com/31457' },
+  { freq: '121.500 MHz', name: 'Emergency Guard VHF', streamUrl: 'https://broadcastify.cdnstream1.com/38498' },
+];
+
+// Maritime / naval radio streams
+const navalStreams: { freq: string; name: string; streamUrl: string }[] = [
+  { freq: '156.800 MHz', name: 'VHF CH16 Coast Guard', streamUrl: 'https://broadcastify.cdnstream1.com/14747' },
+  { freq: '2182 kHz', name: 'Intl Maritime Distress', streamUrl: 'https://broadcastify.cdnstream1.com/38498' },
+  { freq: '156.650 MHz', name: 'CH13 Bridge-to-Bridge', streamUrl: 'https://broadcastify.cdnstream1.com/31457' },
+  { freq: '8291 kHz', name: 'USCG HF Voice', streamUrl: 'https://broadcastify.cdnstream1.com/14748' },
+];
+
+// Satellite downlink frequencies (display only, no audio)
 const satelliteFrequencies: Record<string, { freq: string; band: string }[]> = {
   communication: [{ freq: '3.7-4.2 GHz', band: 'C-Band Downlink' }, { freq: '11.7-12.2 GHz', band: 'Ku-Band' }],
   military: [{ freq: '7.25-7.75 GHz', band: 'X-Band Mil' }, { freq: '20.2-21.2 GHz', band: 'Ka-Band Mil' }],
@@ -35,12 +48,6 @@ const satelliteFrequencies: Record<string, { freq: string; band: string }[]> = {
   weather: [{ freq: '1694.5 MHz', band: 'LRIT' }, { freq: '1707.0 MHz', band: 'HRIT' }],
   starlink: [{ freq: '10.7-12.7 GHz', band: 'Ku-Band DL' }],
 };
-
-const navalFrequencies = [
-  { freq: '2182 kHz', name: 'Intl Distress' },
-  { freq: '156.800 MHz', name: 'CH16 VHF' },
-  { freq: '156.650 MHz', name: 'CH13 Bridge' },
-];
 
 function getAircraftType(ac: AircraftState): string {
   if (ac.category === 'military') return '🛩️ Military';

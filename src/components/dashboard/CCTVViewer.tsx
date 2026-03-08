@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Camera, X, Maximize2, Minimize2, MapPin } from 'lucide-react';
+import { Camera, X, Maximize2, Minimize2, MapPin, RefreshCw } from 'lucide-react';
 import type { CCTVCamera } from '@/types/intelligence';
 
 interface Props {
@@ -8,10 +8,29 @@ interface Props {
   onClose: () => void;
 }
 
+// Map camera IDs to Windy webcam embed URLs
+const WEBCAM_MAP: Record<string, string> = {
+  'cam-1': 'https://webcams.windy.com/webcams/public/embed/player/1241697801/day',
+  'cam-2': 'https://webcams.windy.com/webcams/public/embed/player/1586352498/day',
+  'cam-3': 'https://webcams.windy.com/webcams/public/embed/player/1242006498/day',
+  'cam-4': 'https://webcams.windy.com/webcams/public/embed/player/1170151498/day',
+  'cam-5': 'https://webcams.windy.com/webcams/public/embed/player/1170151498/day',
+  'cam-6': 'https://webcams.windy.com/webcams/public/embed/player/1586352124/day',
+  'cam-7': 'https://webcams.windy.com/webcams/public/embed/player/1459274124/day',
+  'cam-8': 'https://webcams.windy.com/webcams/public/embed/player/1140875498/day',
+  'cam-9': 'https://webcams.windy.com/webcams/public/embed/player/1586779498/day',
+  'cam-10': 'https://webcams.windy.com/webcams/public/embed/player/1586352222/day',
+};
+
 export default function CCTVViewer({ camera, onClose }: Props) {
   const [expanded, setExpanded] = useState(false);
-  // camera.url now stores YouTube embed IDs directly
-  const embedId = camera.url;
+  const [refreshKey, setRefreshKey] = useState(0);
+  const embedUrl = WEBCAM_MAP[camera.id] || `https://webcams.windy.com/webcams/public/embed/player/1241697801/day`;
+
+  useEffect(() => {
+    const interval = setInterval(() => setRefreshKey(k => k + 1), 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <motion.div
@@ -23,7 +42,6 @@ export default function CCTVViewer({ camera, onClose }: Props) {
       }`}
       style={{ boxShadow: '0 8px 40px hsl(0 0% 0% / 0.6), 0 0 20px hsl(var(--primary) / 0.1)' }}
     >
-      {/* Header */}
       <div className="flex items-center gap-2 px-2.5 py-1.5 border-b border-border bg-primary/5">
         <Camera className="w-3.5 h-3.5 text-neon-cyan" />
         <div className="flex-1 min-w-0">
@@ -37,35 +55,35 @@ export default function CCTVViewer({ camera, onClose }: Props) {
             <span>{camera.location}</span>
           </div>
         </div>
-        <button onClick={() => setExpanded(!expanded)} className="p-1 hover:bg-muted/50 rounded transition-colors">
+        <button onClick={() => setRefreshKey(k => k + 1)} className="p-1 hover:bg-muted/50 rounded">
+          <RefreshCw className="w-3 h-3 text-muted-foreground" />
+        </button>
+        <button onClick={() => setExpanded(!expanded)} className="p-1 hover:bg-muted/50 rounded">
           {expanded ? <Minimize2 className="w-3 h-3 text-muted-foreground" /> : <Maximize2 className="w-3 h-3 text-muted-foreground" />}
         </button>
-        <button onClick={onClose} className="p-1 hover:bg-muted/50 rounded transition-colors">
+        <button onClick={onClose} className="p-1 hover:bg-muted/50 rounded">
           <X className="w-3 h-3 text-muted-foreground" />
         </button>
       </div>
 
-      {/* Video */}
       <div className="flex-1 bg-black relative" style={{ height: 'calc(100% - 36px)' }}>
-        {embedId ? (
-          <iframe
-            src={`https://www.youtube.com/embed/${embedId}?autoplay=1&mute=1&controls=1&modestbranding=1&playsinline=1`}
-            className="absolute inset-0 w-full h-full"
-            title={camera.name}
-            allow="autoplay; encrypted-media; picture-in-picture"
-            allowFullScreen
-            loading="lazy"
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <Camera className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-[10px] text-muted-foreground font-mono">FEED CONNECTING...</p>
-              <p className="text-[8px] text-muted-foreground/50 mt-1">{camera.location}</p>
-              <p className="text-[8px] text-primary/50 mt-0.5">{camera.lat.toFixed(4)}°N, {camera.lng.toFixed(4)}°E</p>
-            </div>
-          </div>
-        )}
+        <iframe
+          key={refreshKey}
+          src={embedUrl}
+          className="absolute inset-0 w-full h-full"
+          title={camera.name}
+          allow="autoplay"
+          loading="lazy"
+          style={{ border: 'none' }}
+        />
+        <div className="absolute bottom-1 left-1 right-1 flex items-center justify-between pointer-events-none">
+          <span className="text-[8px] font-mono text-white/70 bg-black/60 px-1 rounded">
+            {camera.lat.toFixed(4)}°N, {camera.lng.toFixed(4)}°E
+          </span>
+          <span className="text-[8px] font-mono text-neon-green bg-black/60 px-1 rounded animate-pulse">
+            ● LIVE WEBCAM
+          </span>
+        </div>
       </div>
     </motion.div>
   );

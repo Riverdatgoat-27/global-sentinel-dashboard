@@ -14,6 +14,7 @@ interface Props {
   aircraft: AircraftState[];
   satellites: SatelliteData[];
   ships: ShipData[];
+  submarines?: SubmarineData[];
   missiles: MissileEvent[];
   infrastructure: InfrastructurePoint[];
   marineAnimals: MarineAnimal[];

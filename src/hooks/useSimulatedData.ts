@@ -30,10 +30,11 @@ function generateSatellites(): SatelliteData[] {
   return satellites;
 }
 
+// Ships with realistic movement based on heading and speed
 function generateShips(): ShipData[] {
   return [
-    { id: 'ship-1', name: 'MSC OSCAR', lat: 1.3 + (Math.random() - 0.5) * 0.5, lng: 103.8 + (Math.random() - 0.5) * 0.5, speed: 14, heading: 270, type: 'cargo', country: 'Panama', flag: '🇵🇦' },
-    { id: 'ship-2', name: 'EVER GIVEN', lat: 30.0 + (Math.random() - 0.5) * 0.3, lng: 32.3 + (Math.random() - 0.5) * 0.3, speed: 12, heading: 180, type: 'cargo', country: 'Panama', flag: '🇵🇦' },
+    { id: 'ship-1', name: 'MSC OSCAR', lat: 1.3, lng: 103.8, speed: 14, heading: 270, type: 'cargo', country: 'Panama', flag: '🇵🇦' },
+    { id: 'ship-2', name: 'EVER GIVEN', lat: 30.0, lng: 32.3, speed: 12, heading: 180, type: 'cargo', country: 'Panama', flag: '🇵🇦' },
     { id: 'ship-3', name: 'JAHRE VIKING', lat: 25.0, lng: 55.0, speed: 10, heading: 90, type: 'tanker', country: 'Norway', flag: '🇳🇴' },
     { id: 'ship-4', name: 'USS GERALD R. FORD', lat: 36.0, lng: -6.0, speed: 30, heading: 90, type: 'naval', country: 'USA', flag: '🇺🇸' },
     { id: 'ship-5', name: 'HMS QUEEN ELIZABETH', lat: 50.8, lng: -1.1, speed: 25, heading: 180, type: 'naval', country: 'UK', flag: '🇬🇧' },
@@ -47,8 +48,32 @@ function generateShips(): ShipData[] {
   ];
 }
 
+// Move ships realistically based on heading and speed
+function moveShips(ships: ShipData[]): ShipData[] {
+  return ships.map(ship => {
+    // Convert speed (knots) to degrees per second (very rough: 1 knot ≈ 0.000278 deg/s lat)
+    const speedFactor = ship.speed * 0.00005; // exaggerated for visibility
+    const headingRad = (ship.heading * Math.PI) / 180;
+    
+    let newLat = ship.lat + Math.cos(headingRad) * speedFactor;
+    let newLng = ship.lng + Math.sin(headingRad) * speedFactor;
+    
+    // Slight random heading drift for realism
+    let newHeading = ship.heading + (Math.random() - 0.5) * 2;
+    if (newHeading < 0) newHeading += 360;
+    if (newHeading >= 360) newHeading -= 360;
+    
+    // Wrap coordinates
+    if (newLng > 180) newLng -= 360;
+    if (newLng < -180) newLng += 360;
+    newLat = Math.max(-85, Math.min(85, newLat));
+    
+    return { ...ship, lat: newLat, lng: newLng, heading: newHeading };
+  });
+}
+
 function generateCyberThreats(): CyberThreat[] {
-  const base: CyberThreat[] = [
+  return [
     { id: 'ct-1', attackType: 'Ransomware', sourceLat: 55.7, sourceLng: 37.6, targetLat: 50.8, targetLng: 4.3, severity: 'critical', target: 'EU Healthcare Systems', source: 'CERT-EU', timestamp: new Date().toISOString(), status: 'active' },
     { id: 'ct-2', attackType: 'DDoS', sourceLat: 39.9, sourceLng: 116.4, targetLat: 1.3, targetLng: 103.8, severity: 'high', target: 'APAC Banking Network', source: 'FS-ISAC', timestamp: new Date().toISOString(), status: 'active' },
     { id: 'ct-3', attackType: 'Supply Chain', sourceLat: 35.7, sourceLng: 51.4, targetLat: 37.8, targetLng: -122.4, severity: 'critical', target: 'Fortune 500 Vendor', source: 'CISA', timestamp: new Date().toISOString(), status: 'investigating' },
@@ -58,7 +83,6 @@ function generateCyberThreats(): CyberThreat[] {
     { id: 'ct-7', attackType: 'Phishing', sourceLat: 37.5, sourceLng: 127.0, targetLat: 35.7, targetLng: 139.7, severity: 'medium', target: 'Japanese Corp Networks', source: 'JPCERT', timestamp: new Date().toISOString(), status: 'investigating' },
     { id: 'ct-8', attackType: 'Wiper Malware', sourceLat: 55.7, sourceLng: 37.6, targetLat: 50.4, targetLng: 30.5, severity: 'critical', target: 'Energy Grid', source: 'CERT-UA', timestamp: new Date().toISOString(), status: 'active' },
   ];
-  return base;
 }
 
 function generateMilitaryEvents(): GlobeEvent[] {
@@ -75,49 +99,15 @@ function generateMilitaryEvents(): GlobeEvent[] {
 
 function generateAlerts(cyberThreats: CyberThreat[], militaryEvents: GlobeEvent[], missiles: MissileEvent[]): AlertNotification[] {
   const alerts: AlertNotification[] = [];
-  
   cyberThreats.filter(t => t.severity === 'critical' && t.status === 'active').forEach(t => {
-    alerts.push({
-      id: `alert-${t.id}`,
-      type: 'cyber',
-      title: `CRITICAL: ${t.attackType} - ${t.target}`,
-      description: `Active ${t.attackType} attack targeting ${t.target}. Source: ${t.source}`,
-      severity: 'critical',
-      timestamp: t.timestamp,
-      lat: t.targetLat,
-      lng: t.targetLng,
-      acknowledged: false,
-    });
+    alerts.push({ id: `alert-${t.id}`, type: 'cyber', title: `CRITICAL: ${t.attackType} - ${t.target}`, description: `Active ${t.attackType} attack targeting ${t.target}. Source: ${t.source}`, severity: 'critical', timestamp: t.timestamp, lat: t.targetLat, lng: t.targetLng, acknowledged: false });
   });
-
   missiles.forEach(m => {
-    alerts.push({
-      id: `alert-${m.id}`,
-      type: 'missile',
-      title: `MISSILE: ${m.title}`,
-      description: `${m.type} missile ${m.status}. Source: ${m.source}`,
-      severity: m.severity,
-      timestamp: m.timestamp,
-      lat: m.launchLat,
-      lng: m.launchLng,
-      acknowledged: false,
-    });
+    alerts.push({ id: `alert-${m.id}`, type: 'missile', title: `MISSILE: ${m.title}`, description: `${m.type} missile ${m.status}. Source: ${m.source}`, severity: m.severity, timestamp: m.timestamp, lat: m.launchLat, lng: m.launchLng, acknowledged: false });
   });
-
   militaryEvents.filter(e => e.severity === 'critical').forEach(e => {
-    alerts.push({
-      id: `alert-${e.id}`,
-      type: 'military',
-      title: e.title,
-      description: e.description,
-      severity: e.severity,
-      timestamp: e.timestamp,
-      lat: e.lat,
-      lng: e.lng,
-      acknowledged: false,
-    });
+    alerts.push({ id: `alert-${e.id}`, type: 'military', title: e.title, description: e.description, severity: e.severity, timestamp: e.timestamp, lat: e.lat, lng: e.lng, acknowledged: false });
   });
-
   return alerts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
@@ -136,20 +126,15 @@ export function useSimulatedData() {
     return () => clearInterval(interval);
   }, []);
 
-  // Slowly drift ships
+  // Move ships realistically every 3 seconds
   useEffect(() => {
     setShips(generateShips());
     const interval = setInterval(() => {
-      setShips(prev => prev.map(ship => ({
-        ...ship,
-        lat: ship.lat + (Math.random() - 0.5) * 0.02,
-        lng: ship.lng + (Math.random() - 0.5) * 0.02,
-      })));
-    }, 10000);
+      setShips(prev => moveShips(prev));
+    }, 3000);
     return () => clearInterval(interval);
   }, []);
 
-  // Generate alerts from threats
   useEffect(() => {
     setAlerts(generateAlerts(cyberThreats, militaryEvents, missiles));
   }, [cyberThreats, militaryEvents, missiles]);

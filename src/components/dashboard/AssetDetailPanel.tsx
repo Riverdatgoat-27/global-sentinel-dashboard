@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plane, Ship, Satellite, Zap, Radio, Volume2, VolumeX, Crosshair, Globe, Gauge, Compass, Shield, Target, Navigation, Wifi, Signal } from 'lucide-react';
+import { X, Plane, Ship, Satellite, Zap, Radio, Volume2, VolumeX, Shield, Target, Signal, Navigation, Wifi, MapPin, Calendar, Ruler, Anchor, User } from 'lucide-react';
 import type { AircraftState, SatelliteData, ShipData, CyberThreat } from '@/types/intelligence';
 
 export type SelectedAsset =
@@ -15,16 +15,17 @@ interface Props {
   onClose: () => void;
 }
 
-// Aviation radio frequencies by callsign prefix
 const aviationFrequencies: Record<string, { freq: string; name: string }[]> = {
-  UAL: [{ freq: '128.825', name: 'United Ops' }, { freq: '121.500', name: 'Emergency' }],
-  BAW: [{ freq: '131.725', name: 'Speedbird Ops' }, { freq: '121.500', name: 'Emergency' }],
+  UAL: [{ freq: '128.825', name: 'United Ops' }],
+  BAW: [{ freq: '131.725', name: 'Speedbird Ops' }],
   DLH: [{ freq: '131.125', name: 'Lufthansa Ops' }],
   AAL: [{ freq: '129.125', name: 'American Ops' }],
   DAL: [{ freq: '130.025', name: 'Delta Ops' }],
   SWR: [{ freq: '136.025', name: 'Swiss Ops' }],
   AFR: [{ freq: '131.725', name: 'Air France Ops' }],
-  MIL: [{ freq: '243.000', name: 'Military UHF Guard' }, { freq: '121.500', name: 'VHF Guard' }],
+  RCH: [{ freq: '311.000', name: 'USAF REACH' }, { freq: '243.000', name: 'Military Guard' }],
+  RRR: [{ freq: '243.000', name: 'RAF Ops' }],
+  SAM: [{ freq: '243.000', name: 'SAM Ops' }, { freq: '121.500', name: 'VHF Guard' }],
 };
 
 const satelliteFrequencies: Record<string, { freq: string; band: string }[]> = {
@@ -32,28 +33,20 @@ const satelliteFrequencies: Record<string, { freq: string; band: string }[]> = {
   military: [{ freq: '7.25-7.75 GHz', band: 'X-Band Mil' }, { freq: '20.2-21.2 GHz', band: 'Ka-Band Mil' }],
   gps: [{ freq: '1575.42 MHz', band: 'L1 C/A' }, { freq: '1227.60 MHz', band: 'L2' }],
   weather: [{ freq: '1694.5 MHz', band: 'LRIT' }, { freq: '1707.0 MHz', band: 'HRIT' }],
-  starlink: [{ freq: '10.7-12.7 GHz', band: 'Ku-Band DL' }, { freq: '14.0-14.5 GHz', band: 'Ku-Band UL' }],
+  starlink: [{ freq: '10.7-12.7 GHz', band: 'Ku-Band DL' }],
 };
 
 const navalFrequencies = [
   { freq: '2182 kHz', name: 'Intl Distress' },
   { freq: '156.800 MHz', name: 'CH16 VHF' },
   { freq: '156.650 MHz', name: 'CH13 Bridge' },
-  { freq: '243.000 MHz', name: 'Mil Guard UHF' },
 ];
 
-// Live scanner stream URLs for aviation/maritime
-const scannerStreams: Record<string, string> = {
-  'New York TRACON': 'https://www.liveatc.net/hlisten.php?mount=kjfk_app_gnd',
-  'London Control': 'https://www.liveatc.net/hlisten.php?mount=egll_app',
-  'US Navy Fleet': 'https://www.broadcastify.com/listen/feed/22534',
-};
-
 function getAircraftType(ac: AircraftState): string {
-  if (ac.callsign?.startsWith('MIL') || ac.category === 'military') return 'Military';
-  if ((ac.velocity || 0) > 280) return 'High-Speed / Military';
-  if (ac.callsign?.startsWith('N') && !ac.callsign?.match(/\d{3,}/)) return 'Private / GA';
-  return 'Commercial';
+  if (ac.category === 'military') return '🛩️ Military';
+  if (ac.category === 'government') return '🏛️ Government';
+  if (ac.callsign?.startsWith('N') && !ac.callsign?.match(/\d{3,}/)) return '🛩️ Private / GA';
+  return '✈️ Commercial';
 }
 
 function getCallsignPrefix(callsign: string | null): string {
@@ -63,17 +56,8 @@ function getCallsignPrefix(callsign: string | null): string {
 
 export default function AssetDetailPanel({ asset, onClose }: Props) {
   const [activeTab, setActiveTab] = useState<'info' | 'radio' | 'signals'>('info');
-  const [scannerPlaying, setScannerPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, [asset]);
+  useEffect(() => { setActiveTab('info'); }, [asset]);
 
   if (!asset) return null;
 
@@ -89,11 +73,10 @@ export default function AssetDetailPanel({ asset, onClose }: Props) {
         className="absolute top-4 right-4 w-80 z-50 bg-card border border-border rounded-lg shadow-2xl overflow-hidden"
         style={{ boxShadow: '0 8px 32px hsl(0 0% 0% / 0.5), 0 0 0 1px hsl(var(--border))' }}
       >
-        {/* Header */}
         <div className="px-3 py-2.5 border-b border-border flex items-center gap-2 bg-muted/30">
-          {asset.type === 'aircraft' && <Plane className="w-4 h-4 text-neon-cyan" />}
-          {asset.type === 'ship' && <Ship className="w-4 h-4 text-neon-green" />}
-          {asset.type === 'satellite' && <Satellite className="w-4 h-4 text-neon-blue" />}
+          {asset.type === 'aircraft' && <span className="text-sm">✈️</span>}
+          {asset.type === 'ship' && <span className="text-sm">🚢</span>}
+          {asset.type === 'satellite' && <span className="text-sm">🛰️</span>}
           {asset.type === 'cyber' && <Zap className="w-4 h-4 text-neon-red" />}
           <span className="font-mono text-xs font-semibold text-foreground tracking-wide">
             {asset.type === 'aircraft' && (asset.data.callsign || asset.data.icao24.toUpperCase())}
@@ -106,7 +89,6 @@ export default function AssetDetailPanel({ asset, onClose }: Props) {
           </button>
         </div>
 
-        {/* Tabs */}
         <div className="flex border-b border-border">
           {tabs.map(tab => (
             <button
@@ -123,8 +105,7 @@ export default function AssetDetailPanel({ asset, onClose }: Props) {
           ))}
         </div>
 
-        {/* Content */}
-        <div className="max-h-72 overflow-y-auto">
+        <div className="max-h-80 overflow-y-auto">
           {activeTab === 'info' && (
             <div className="p-3 space-y-2">
               {asset.type === 'aircraft' && <AircraftInfo data={asset.data} />}
@@ -154,10 +135,13 @@ export default function AssetDetailPanel({ asset, onClose }: Props) {
   );
 }
 
-function InfoRow({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function InfoRow({ label, value, accent, icon }: { label: string; value: string; accent?: boolean; icon?: React.ReactNode }) {
   return (
     <div className="flex justify-between items-center py-1 border-b border-border/50">
-      <span className="text-[9px] text-muted-foreground font-mono uppercase">{label}</span>
+      <span className="text-[9px] text-muted-foreground font-mono uppercase flex items-center gap-1">
+        {icon}
+        {label}
+      </span>
       <span className={`text-[10px] font-mono font-medium ${accent ? 'text-neon-cyan' : 'text-foreground'}`}>{value}</span>
     </div>
   );
@@ -165,22 +149,28 @@ function InfoRow({ label, value, accent }: { label: string; value: string; accen
 
 function AircraftInfo({ data }: { data: AircraftState }) {
   const type = getAircraftType(data);
-  const isMil = type.includes('Military');
+  const isMil = data.category === 'military';
+  const isGov = data.category === 'government';
   return (
     <>
-      <InfoRow label="Callsign" value={data.callsign || 'N/A'} accent />
+      <InfoRow label="Callsign" value={data.callsign || 'N/A'} accent icon={<Navigation className="w-2.5 h-2.5" />} />
       <InfoRow label="ICAO Hex" value={data.icao24.toUpperCase()} />
       <InfoRow label="Type" value={type} />
+      {data.aircraftType && <InfoRow label="Aircraft" value={data.aircraftType} />}
+      {data.operator && <InfoRow label="Operator" value={data.operator} icon={<User className="w-2.5 h-2.5" />} />}
       <InfoRow label="Country" value={data.originCountry} />
+      {data.route && (
+        <InfoRow label="Route" value={`${data.route.from} → ${data.route.to}`} accent icon={<MapPin className="w-2.5 h-2.5" />} />
+      )}
       <InfoRow label="Altitude" value={data.altitude ? `${Math.round(data.altitude)}m / FL${Math.round(data.altitude / 30.48).toString().padStart(3, '0')}` : 'Ground'} />
       <InfoRow label="Speed" value={data.velocity ? `${Math.round(data.velocity)} kts` : '---'} />
       <InfoRow label="Heading" value={data.heading ? `${Math.round(data.heading)}°` : '---'} />
       <InfoRow label="Position" value={data.latitude && data.longitude ? `${data.latitude.toFixed(4)}°, ${data.longitude.toFixed(4)}°` : '---'} />
-      {isMil && (
+      {(isMil || isGov) && (
         <div className="mt-2 px-2 py-1.5 rounded bg-destructive/10 border border-destructive/20">
           <div className="flex items-center gap-1.5 text-[9px] text-neon-red font-mono">
             <Shield className="w-3 h-3" />
-            MILITARY ASSET — RESTRICTED TRACKING
+            {isGov ? 'GOVERNMENT AIRCRAFT — VIP TRANSPORT' : 'MILITARY ASSET — RESTRICTED TRACKING'}
           </div>
         </div>
       )}
@@ -191,9 +181,16 @@ function AircraftInfo({ data }: { data: AircraftState }) {
 function ShipInfo({ data }: { data: ShipData }) {
   return (
     <>
-      <InfoRow label="Vessel" value={data.name} accent />
+      <InfoRow label="Vessel" value={data.name} accent icon={<Anchor className="w-2.5 h-2.5" />} />
       <InfoRow label="Flag" value={`${data.flag} ${data.country}`} />
       <InfoRow label="Type" value={data.type.toUpperCase()} />
+      {data.mmsi && <InfoRow label="MMSI" value={data.mmsi} />}
+      {data.imo && <InfoRow label="IMO" value={data.imo} />}
+      {data.owner && <InfoRow label="Owner" value={data.owner} icon={<User className="w-2.5 h-2.5" />} />}
+      {data.builtYear && <InfoRow label="Built" value={`${data.builtYear}`} icon={<Calendar className="w-2.5 h-2.5" />} />}
+      {data.builtAt && <InfoRow label="Built At" value={data.builtAt} icon={<MapPin className="w-2.5 h-2.5" />} />}
+      {data.grossTonnage && <InfoRow label="Tonnage" value={`${data.grossTonnage.toLocaleString()} GT`} />}
+      {data.length && <InfoRow label="Length" value={`${data.length}m`} icon={<Ruler className="w-2.5 h-2.5" />} />}
       <InfoRow label="Speed" value={`${data.speed} kts`} />
       <InfoRow label="Heading" value={`${data.heading}°`} />
       <InfoRow label="Position" value={`${data.lat.toFixed(4)}°, ${data.lng.toFixed(4)}°`} />
@@ -257,21 +254,12 @@ function FreqRow({ freq, label }: { freq: string; label: string }) {
 function AircraftRadio({ data }: { data: AircraftState }) {
   const prefix = getCallsignPrefix(data.callsign);
   const freqs = aviationFrequencies[prefix] || [{ freq: '121.500 MHz', name: 'Emergency Guard' }];
-
   return (
     <div className="space-y-1.5">
       <div className="text-[9px] text-muted-foreground font-mono uppercase mb-2">Aviation Frequencies</div>
       {freqs.map((f, i) => <FreqRow key={i} freq={`${f.freq} MHz`} label={f.name} />)}
       <FreqRow freq="121.500 MHz" label="VHF Guard" />
       <FreqRow freq="243.000 MHz" label="UHF Guard" />
-      <div className="mt-3 text-[9px] text-muted-foreground font-mono uppercase mb-1">ATC Scanners</div>
-      <div className="text-[10px] text-muted-foreground px-2 py-2 bg-muted/20 rounded border border-border/50">
-        <div className="flex items-center gap-1.5 mb-1">
-          <Wifi className="w-3 h-3 text-neon-cyan" />
-          <span className="text-neon-cyan font-mono">LiveATC Scanner</span>
-        </div>
-        <p className="text-[9px] leading-relaxed">Listen to live ATC at liveatc.net for real-time communications on this frequency.</p>
-      </div>
     </div>
   );
 }
@@ -291,19 +279,12 @@ function SatelliteRadio({ data }: { data: SatelliteData }) {
     <div className="space-y-1.5">
       <div className="text-[9px] text-muted-foreground font-mono uppercase mb-2">Satellite Bands</div>
       {freqs.map((f, i) => <FreqRow key={i} freq={f.freq} label={f.band} />)}
-      <div className="mt-3 px-2 py-2 bg-muted/20 rounded border border-border/50">
-        <div className="flex items-center gap-1.5 text-[9px] text-neon-blue font-mono">
-          <Radio className="w-3 h-3" />
-          SDR receivers can decode {data.category === 'weather' ? 'APT/LRIT imagery' : data.category === 'gps' ? 'navigation signals' : 'telemetry'} from this satellite
-        </div>
-      </div>
     </div>
   );
 }
 
 function SignalIntelligence({ asset }: { asset: SelectedAsset }) {
   if (!asset) return null;
-
   const signals = [
     { type: 'ELINT', strength: Math.random() * 100, desc: 'Electronic emissions detected' },
     { type: 'COMINT', strength: Math.random() * 100, desc: 'Communication intercepts' },
@@ -326,11 +307,7 @@ function SignalIntelligence({ asset }: { asset: SelectedAsset }) {
               className="h-full rounded-full transition-all duration-700"
               style={{
                 width: `${sig.strength}%`,
-                background: sig.strength > 70
-                  ? 'hsl(var(--neon-red))'
-                  : sig.strength > 40
-                    ? 'hsl(var(--neon-amber))'
-                    : 'hsl(var(--neon-green))',
+                background: sig.strength > 70 ? 'hsl(var(--neon-red))' : sig.strength > 40 ? 'hsl(var(--neon-amber))' : 'hsl(var(--neon-green))',
               }}
             />
           </div>

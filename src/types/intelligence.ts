@@ -43,7 +43,10 @@ export interface AircraftState {
   velocity: number | null;
   heading: number | null;
   onGround: boolean;
-  category?: 'commercial' | 'cargo' | 'military' | 'helicopter' | 'unknown';
+  category?: 'commercial' | 'cargo' | 'military' | 'helicopter' | 'government' | 'unknown';
+  operator?: string;
+  aircraftType?: string;
+  route?: { from: string; to: string };
 }
 
 export interface SatelliteData {
@@ -67,6 +70,26 @@ export interface ShipData {
   type: 'cargo' | 'tanker' | 'passenger' | 'fishing' | 'naval';
   country: string;
   flag: string;
+  mmsi?: string;
+  imo?: string;
+  owner?: string;
+  builtYear?: number;
+  builtAt?: string;
+  grossTonnage?: number;
+  length?: number;
+}
+
+export interface MarineAnimal {
+  id: string;
+  name: string;
+  species: string;
+  lat: number;
+  lng: number;
+  speed: number;
+  heading: number;
+  tracker: string;
+  lastPing: string;
+  category: 'whale' | 'shark' | 'turtle' | 'dolphin' | 'seal';
 }
 
 export interface CyberThreat {
@@ -152,6 +175,7 @@ export interface LayerVisibility {
   ships: boolean;
   infrastructure: boolean;
   missiles: boolean;
+  marineAnimals: boolean;
 }
 
 export interface AIInsight {

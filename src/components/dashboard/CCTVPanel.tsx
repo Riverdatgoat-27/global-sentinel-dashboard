@@ -1,13 +1,22 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, MapPin, X, Maximize2, Minimize2 } from 'lucide-react';
-import { cctvCameras } from '@/data/mockData';
+import { Camera, MapPin, X, Maximize2, Minimize2, ExternalLink } from 'lucide-react';
+
+// Real public camera YouTube live streams embeddable
+const liveCameras = [
+  { id: 'cam-1', name: 'Times Square NYC', location: 'New York, USA', embedId: 'AdUw5RdyZxI', type: 'city' as const },
+  { id: 'cam-2', name: 'Jackson Hole', location: 'Wyoming, USA', embedId: 'DoGXOP1FMbE', type: 'city' as const },
+  { id: 'cam-3', name: 'Venice Beach', location: 'Los Angeles, USA', embedId: 'ZIvLTIBbpLQ', type: 'city' as const },
+  { id: 'cam-4', name: 'Miami Beach', location: 'Florida, USA', embedId: '2DC9xXSIDhI', type: 'city' as const },
+  { id: 'cam-5', name: 'Dublin City', location: 'Dublin, Ireland', embedId: 'Y87VCkoqNKU', type: 'city' as const },
+  { id: 'cam-6', name: 'ISS Earth View', location: 'Low Earth Orbit', embedId: 'xRPTBhmcyXY', type: 'weather' as const },
+  { id: 'cam-7', name: 'Tokyo Skyline', location: 'Tokyo, Japan', embedId: 'DjYZk8nrXVY', type: 'city' as const },
+  { id: 'cam-8', name: 'Port of LA', location: 'Los Angeles, USA', embedId: '1NdFfMLRGNw', type: 'port' as const },
+];
 
 export default function CCTVPanel() {
   const [selectedCam, setSelectedCam] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(false);
-
-  const activeCam = cctvCameras.find(c => c.id === selectedCam);
+  const activeCam = liveCameras.find(c => c.id === selectedCam);
 
   return (
     <div className="panel h-full flex flex-col">
@@ -15,13 +24,13 @@ export default function CCTVPanel() {
         <Camera className="w-3.5 h-3.5 text-neon-cyan" />
         Public CCTV
         <span className="ml-auto text-[9px] text-muted-foreground font-mono">
-          {cctvCameras.length} FEEDS
+          {liveCameras.length} LIVE FEEDS
         </span>
       </div>
       <div className="flex-1 flex overflow-hidden">
         {/* Camera list */}
         <div className={`${selectedCam ? 'w-36' : 'w-full'} shrink-0 overflow-y-auto border-r border-border transition-all`}>
-          {cctvCameras.map((cam, i) => (
+          {liveCameras.map((cam, i) => (
             <motion.div
               key={cam.id}
               initial={{ opacity: 0 }}
@@ -33,7 +42,7 @@ export default function CCTVPanel() {
               }`}
             >
               <div className="flex items-center gap-2 min-w-0">
-                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${selectedCam === cam.id ? 'bg-primary' : 'bg-muted-foreground/40'}`} />
+                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${selectedCam === cam.id ? 'bg-neon-green animate-pulse' : 'bg-neon-green/40'}`} />
                 <span className="text-[10px] font-medium text-foreground truncate">{cam.name}</span>
               </div>
               <div className="flex items-center gap-1 mt-0.5 text-[9px] text-muted-foreground ml-3.5">
@@ -55,43 +64,26 @@ export default function CCTVPanel() {
             >
               <div className="flex items-center justify-between px-2 py-1 border-b border-border">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-1.5 h-1.5 rounded-full bg-neon-red threat-pulse" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
                   <span className="text-[10px] font-medium text-foreground truncate">{activeCam.name}</span>
-                  <span className="text-[8px] text-muted-foreground uppercase">{activeCam.type}</span>
+                  <span className="text-[8px] text-neon-green uppercase font-mono">LIVE</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setExpanded(!expanded)}
-                    className="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {expanded ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
-                  </button>
-                  <button
-                    onClick={() => setSelectedCam(null)}
-                    className="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
+                <button
+                  onClick={() => setSelectedCam(null)}
+                  className="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
               </div>
               <div className="flex-1 relative bg-black">
-                {activeCam.url ? (
-                  <iframe
-                    src={activeCam.url}
-                    className="absolute inset-0 w-full h-full"
-                    title={activeCam.name}
-                    allow="autoplay; encrypted-media"
-                    sandbox="allow-scripts allow-same-origin"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-[10px]">
-                    <div className="text-center">
-                      <Camera className="w-6 h-6 mx-auto mb-1 opacity-30" />
-                      <p>Feed unavailable</p>
-                    </div>
-                  </div>
-                )}
+                <iframe
+                  src={`https://www.youtube.com/embed/${activeCam.embedId}?autoplay=1&mute=1&controls=0&modestbranding=1&playsinline=1`}
+                  className="absolute inset-0 w-full h-full"
+                  title={activeCam.name}
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                  loading="lazy"
+                />
               </div>
             </motion.div>
           )}

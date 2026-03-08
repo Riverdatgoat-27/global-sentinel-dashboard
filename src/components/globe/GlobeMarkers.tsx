@@ -1,7 +1,7 @@
-import { useRef, useMemo, useCallback } from 'react';
+import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { GlobeEvent, CyberThreat, AircraftState, SatelliteData, ShipData, MissileEvent, InfrastructurePoint } from '@/types/intelligence';
+import type { GlobeEvent, CyberThreat, AircraftState, SatelliteData, ShipData, MissileEvent, InfrastructurePoint, MarineAnimal } from '@/types/intelligence';
 
 interface Props {
   earthquakes: GlobeEvent[];
@@ -12,6 +12,7 @@ interface Props {
   ships: ShipData[];
   missiles?: MissileEvent[];
   infrastructure?: InfrastructurePoint[];
+  marineAnimals?: MarineAnimal[];
   layers: {
     earthquakes: boolean;
     cyberAttacks: boolean;
@@ -21,6 +22,7 @@ interface Props {
     ships: boolean;
     infrastructure: boolean;
     missiles: boolean;
+    marineAnimals: boolean;
   };
   onSelectEvent?: (event: GlobeEvent | null) => void;
 }
@@ -35,47 +37,23 @@ function latLngToVector3(lat: number, lng: number, radius = 2.01): THREE.Vector3
   );
 }
 
-// Create an airplane shape
-function createAircraftShape(): THREE.Shape {
-  const s = new THREE.Shape();
-  // Fuselage
-  s.moveTo(0, 1.2);
-  s.lineTo(0.15, 0.4);
-  // Right wing
-  s.lineTo(1, 0.2);
-  s.lineTo(1, 0);
-  s.lineTo(0.15, -0.1);
-  // Right tail
-  s.lineTo(0.15, -0.8);
-  s.lineTo(0.5, -1.2);
-  s.lineTo(0.5, -1.3);
-  s.lineTo(0, -0.9);
-  // Left tail
-  s.lineTo(-0.5, -1.3);
-  s.lineTo(-0.5, -1.2);
-  s.lineTo(-0.15, -0.8);
-  // Left wing
-  s.lineTo(-0.15, -0.1);
-  s.lineTo(-1, 0);
-  s.lineTo(-1, 0.2);
-  s.lineTo(-0.15, 0.4);
-  s.lineTo(0, 1.2);
-  return s;
-}
-
-// Create a ship shape (top-down hull)
-function createShipShape(): THREE.Shape {
-  const s = new THREE.Shape();
-  s.moveTo(0, 1.5);    // Bow
-  s.lineTo(0.4, 0.6);
-  s.lineTo(0.45, -0.5);
-  s.lineTo(0.3, -1.2);
-  s.lineTo(0, -1.5);   // Stern
-  s.lineTo(-0.3, -1.2);
-  s.lineTo(-0.45, -0.5);
-  s.lineTo(-0.4, 0.6);
-  s.lineTo(0, 1.5);
-  return s;
+// Create emoji-like text sprite for markers
+function createEmojiSprite(emoji: string, scale: number): THREE.Sprite {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, 64, 64);
+  ctx.font = '48px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(emoji, 32, 32);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false, sizeAttenuation: true });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.setScalar(scale);
+  return sprite;
 }
 
 function EventMarkers({ events, color, pulseSpeed = 3 }: { events: { lat: number; lng: number }[]; color?: string; pulseSpeed?: number }) {
@@ -140,8 +118,8 @@ function CyberAttackLines({ threats }: { threats: CyberThreat[] }) {
       const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
       const points = curve.getPoints(50);
       const geom = new THREE.BufferGeometry().setFromPoints(points);
-      const color = threat.severity === 'critical' ? '#dc2626' : threat.severity === 'high' ? '#ea580c' : '#2563eb';
-      const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.5 });
+      const color = threat.severity === 'critical' ? '#ff1744' : threat.severity === 'high' ? '#ff6d00' : '#2979ff';
+      const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.6 });
       return new THREE.Line(geom, mat);
     });
   }, [threats]);
@@ -188,7 +166,7 @@ function MissileArcs({ missiles }: { missiles: MissileEvent[] }) {
       const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
       const points = curve.getPoints(60);
       const geom = new THREE.BufferGeometry().setFromPoints(points);
-      const mat = new THREE.LineBasicMaterial({ color: '#dc2626', transparent: true, opacity: 0.7 });
+      const mat = new THREE.LineBasicMaterial({ color: '#ff1744', transparent: true, opacity: 0.7 });
       return new THREE.Line(geom, mat);
     });
   }, [missiles]);
@@ -202,48 +180,30 @@ function MissileArcs({ missiles }: { missiles: MissileEvent[] }) {
       ))}
       <instancedMesh ref={meshRef} args={[undefined, undefined, missiles.length]}>
         <sphereGeometry args={[1, 6, 6]} />
-        <meshBasicMaterial color="#dc2626" />
+        <meshBasicMaterial color="#ff1744" />
       </instancedMesh>
-      <EventMarkers events={missiles.map(m => ({ lat: m.launchLat, lng: m.launchLng }))} color="#ea580c" pulseSpeed={5} />
-      <EventMarkers events={missiles.map(m => ({ lat: m.targetLat, lng: m.targetLng }))} color="#dc2626" pulseSpeed={6} />
+      <EventMarkers events={missiles.map(m => ({ lat: m.launchLat, lng: m.launchLng }))} color="#ff6d00" pulseSpeed={5} />
+      <EventMarkers events={missiles.map(m => ({ lat: m.targetLat, lng: m.targetLng }))} color="#ff1744" pulseSpeed={6} />
     </group>
   );
 }
 
-// Aircraft with proper airplane silhouettes that move along heading
+// Aircraft with emoji sprites ✈️
 function AircraftMarkers({ aircraft }: { aircraft: AircraftState[] }) {
   const groupRef = useRef<THREE.Group>(null);
-  const meshesRef = useRef<THREE.Mesh[]>([]);
   const prevPositions = useRef<Map<string, THREE.Vector3>>(new Map());
-
-  const aircraftGeom = useMemo(() => {
-    const shape = createAircraftShape();
-    return new THREE.ShapeGeometry(shape);
-  }, []);
-
-  const civMat = useMemo(() => new THREE.MeshBasicMaterial({ 
-    color: '#38bdf8', transparent: true, opacity: 0.85, side: THREE.DoubleSide 
-  }), []);
-  const milMat = useMemo(() => new THREE.MeshBasicMaterial({ 
-    color: '#ef4444', transparent: true, opacity: 0.9, side: THREE.DoubleSide 
-  }), []);
 
   useFrame((_, delta) => {
     if (!groupRef.current) return;
-
-    // Remove old meshes
     while (groupRef.current.children.length > 0) {
       groupRef.current.remove(groupRef.current.children[0]);
     }
-    meshesRef.current = [];
 
     aircraft.forEach((ac) => {
       if (!ac.latitude || !ac.longitude) return;
+      const isMilitary = ac.category === 'military' || ac.callsign?.startsWith('RCH') || ac.callsign?.startsWith('RRR');
+      const isGov = ac.category === 'government' || ac.callsign?.startsWith('SAM') || ac.callsign?.startsWith('EXEC');
 
-      const isMilitary = ac.callsign?.startsWith('MIL') || ac.category === 'military' ||
-        (['United States', 'Russia', 'China'].includes(ac.originCountry) && (ac.velocity || 0) > 280);
-
-      // Smooth position interpolation
       const targetPos = latLngToVector3(ac.latitude, ac.longitude, 2.01 + (ac.altitude || 10000) / 1500000);
       const prevPos = prevPositions.current.get(ac.icao24);
       let pos: THREE.Vector3;
@@ -254,45 +214,38 @@ function AircraftMarkers({ aircraft }: { aircraft: AircraftState[] }) {
       }
       prevPositions.current.set(ac.icao24, pos.clone());
 
-      const mesh = new THREE.Mesh(aircraftGeom, isMilitary ? milMat : civMat);
-      mesh.position.copy(pos);
-
-      // Orient to face away from globe center
-      mesh.lookAt(0, 0, 0);
-      mesh.rotateX(Math.PI); // flip to face outward
-
-      // Rotate by heading on the surface plane
-      if (ac.heading) {
-        mesh.rotateZ((-ac.heading * Math.PI) / 180);
-      }
-
-      mesh.scale.setScalar(isMilitary ? 0.012 : 0.008);
-      mesh.userData = { type: 'aircraft', data: ac };
-
-      groupRef.current!.add(mesh);
-      meshesRef.current.push(mesh);
+      const emoji = isMilitary ? '🛩️' : isGov ? '🏛️' : '✈️';
+      const scale = isMilitary ? 0.06 : isGov ? 0.055 : 0.045;
+      const sprite = createEmojiSprite(emoji, scale);
+      sprite.position.copy(pos);
+      sprite.userData = { type: 'aircraft', data: ac };
+      groupRef.current!.add(sprite);
     });
   });
 
   return <group ref={groupRef} />;
 }
 
+// Satellites with emoji 🛰️
 function SatelliteMarkers({ satellites }: { satellites: SatelliteData[] }) {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const groupRef = useRef<THREE.Group>(null);
   const orbitRef = useRef<THREE.Group>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
 
   useFrame(() => {
-    if (!meshRef.current || satellites.length === 0) return;
-    satellites.forEach((sat, i) => {
+    if (!groupRef.current) return;
+    while (groupRef.current.children.length > 0) {
+      groupRef.current.remove(groupRef.current.children[0]);
+    }
+
+    satellites.forEach((sat) => {
       const alt = 2.01 + sat.altitude / 20000;
       const pos = latLngToVector3(sat.lat, sat.lng, Math.min(alt, 4));
-      dummy.position.copy(pos);
-      dummy.scale.setScalar(sat.category === 'military' ? 0.014 : 0.01);
-      dummy.updateMatrix();
-      meshRef.current!.setMatrixAt(i, dummy.matrix);
+      const emoji = sat.category === 'military' ? '🔴' : sat.name.includes('ISS') ? '🛸' : '🛰️';
+      const scale = sat.category === 'military' ? 0.04 : 0.035;
+      const sprite = createEmojiSprite(emoji, scale);
+      sprite.position.copy(pos);
+      groupRef.current!.add(sprite);
     });
-    meshRef.current.instanceMatrix.needsUpdate = true;
   });
 
   const orbitLines = useMemo(() => {
@@ -305,7 +258,7 @@ function SatelliteMarkers({ satellites }: { satellites: SatelliteData[] }) {
         points.push(new THREE.Vector3(r * Math.cos(angle), r * Math.sin(angle) * 0.3, r * Math.sin(angle)));
       }
       const geom = new THREE.BufferGeometry().setFromPoints(points);
-      const mat = new THREE.LineBasicMaterial({ color: sat.category === 'military' ? '#ef4444' : '#6366f1', transparent: true, opacity: 0.12 });
+      const mat = new THREE.LineBasicMaterial({ color: sat.category === 'military' ? '#ff1744' : '#7c4dff', transparent: true, opacity: 0.12 });
       return new THREE.Line(geom, mat);
     });
   }, [satellites]);
@@ -314,10 +267,7 @@ function SatelliteMarkers({ satellites }: { satellites: SatelliteData[] }) {
 
   return (
     <group>
-      <instancedMesh ref={meshRef} args={[undefined, undefined, satellites.length]}>
-        <octahedronGeometry args={[1, 0]} />
-        <meshBasicMaterial color="#818cf8" transparent opacity={0.7} />
-      </instancedMesh>
+      <group ref={groupRef} />
       <group ref={orbitRef}>
         {orbitLines.map((obj, i) => <primitive key={`orbit-${i}`} object={obj} />)}
       </group>
@@ -325,25 +275,10 @@ function SatelliteMarkers({ satellites }: { satellites: SatelliteData[] }) {
   );
 }
 
-// Ships with hull shapes that move along heading in real-time
+// Ships with emoji 🚢⚓
 function ShipMarkers({ ships }: { ships: ShipData[] }) {
   const groupRef = useRef<THREE.Group>(null);
   const prevPositions = useRef<Map<string, THREE.Vector3>>(new Map());
-
-  const shipGeom = useMemo(() => {
-    const shape = createShipShape();
-    return new THREE.ShapeGeometry(shape);
-  }, []);
-
-  const civMat = useMemo(() => new THREE.MeshBasicMaterial({ 
-    color: '#34d399', transparent: true, opacity: 0.8, side: THREE.DoubleSide 
-  }), []);
-  const navalMat = useMemo(() => new THREE.MeshBasicMaterial({ 
-    color: '#f87171', transparent: true, opacity: 0.9, side: THREE.DoubleSide 
-  }), []);
-  const tankerMat = useMemo(() => new THREE.MeshBasicMaterial({ 
-    color: '#fbbf24', transparent: true, opacity: 0.8, side: THREE.DoubleSide 
-  }), []);
 
   useFrame((_, delta) => {
     if (!groupRef.current) return;
@@ -362,19 +297,57 @@ function ShipMarkers({ ships }: { ships: ShipData[] }) {
       }
       prevPositions.current.set(ship.id, pos.clone());
 
-      let mat = civMat;
-      if (ship.type === 'naval') mat = navalMat;
-      else if (ship.type === 'tanker') mat = tankerMat;
+      let emoji = '🚢';
+      let scale = 0.04;
+      if (ship.type === 'naval') { emoji = '⚓'; scale = 0.05; }
+      else if (ship.type === 'tanker') { emoji = '🛢️'; scale = 0.04; }
+      else if (ship.type === 'fishing') { emoji = '🐟'; scale = 0.035; }
+      else if (ship.type === 'passenger') { emoji = '🛳️'; scale = 0.045; }
 
-      const mesh = new THREE.Mesh(shipGeom, mat);
-      mesh.position.copy(pos);
-      mesh.lookAt(0, 0, 0);
-      mesh.rotateX(Math.PI);
-      mesh.rotateZ((-ship.heading * Math.PI) / 180);
-      mesh.scale.setScalar(ship.type === 'naval' ? 0.014 : 0.009);
-      mesh.userData = { type: 'ship', data: ship };
+      const sprite = createEmojiSprite(emoji, scale);
+      sprite.position.copy(pos);
+      sprite.userData = { type: 'ship', data: ship };
+      groupRef.current!.add(sprite);
+    });
+  });
 
-      groupRef.current!.add(mesh);
+  return <group ref={groupRef} />;
+}
+
+// Marine animals with emoji 🐋🦈🐢🐬
+function MarineAnimalMarkers({ animals }: { animals: MarineAnimal[] }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const prevPositions = useRef<Map<string, THREE.Vector3>>(new Map());
+
+  useFrame((_, delta) => {
+    if (!groupRef.current) return;
+    while (groupRef.current.children.length > 0) {
+      groupRef.current.remove(groupRef.current.children[0]);
+    }
+
+    animals.forEach((animal) => {
+      const targetPos = latLngToVector3(animal.lat, animal.lng, 2.003);
+      const prevPos = prevPositions.current.get(animal.id);
+      let pos: THREE.Vector3;
+      if (prevPos) {
+        pos = prevPos.clone().lerp(targetPos, Math.min(delta * 2, 1));
+      } else {
+        pos = targetPos;
+      }
+      prevPositions.current.set(animal.id, pos.clone());
+
+      const emojiMap: Record<string, string> = {
+        whale: '🐋',
+        shark: '🦈',
+        turtle: '🐢',
+        dolphin: '🐬',
+        seal: '🦭',
+      };
+
+      const sprite = createEmojiSprite(emojiMap[animal.category] || '🐋', 0.045);
+      sprite.position.copy(pos);
+      sprite.userData = { type: 'marine', data: animal };
+      groupRef.current!.add(sprite);
     });
   });
 
@@ -382,29 +355,31 @@ function ShipMarkers({ ships }: { ships: ShipData[] }) {
 }
 
 function InfrastructureMarkers({ points }: { points: InfrastructurePoint[] }) {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const groupRef = useRef<THREE.Group>(null);
 
   useFrame(() => {
-    if (!meshRef.current || points.length === 0) return;
-    points.forEach((pt, i) => {
+    if (!groupRef.current) return;
+    while (groupRef.current.children.length > 0) {
+      groupRef.current.remove(groupRef.current.children[0]);
+    }
+
+    points.forEach((pt) => {
       const pos = latLngToVector3(pt.lat, pt.lng, 2.008);
-      dummy.position.copy(pos);
-      dummy.scale.setScalar(0.01);
-      dummy.updateMatrix();
-      meshRef.current!.setMatrixAt(i, dummy.matrix);
+      const emojiMap: Record<string, string> = {
+        airport: '🛫',
+        port: '⚓',
+        military_base: '🎖️',
+        nuclear_plant: '☢️',
+        data_center: '💾',
+      };
+      const sprite = createEmojiSprite(emojiMap[pt.type] || '📍', 0.04);
+      sprite.position.copy(pos);
+      groupRef.current!.add(sprite);
     });
-    meshRef.current.instanceMatrix.needsUpdate = true;
   });
 
   if (points.length === 0) return null;
-
-  return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, points.length]}>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshBasicMaterial color="#f59e0b" transparent opacity={0.5} />
-    </instancedMesh>
-  );
+  return <group ref={groupRef} />;
 }
 
 export default function GlobeMarkers(props: Props) {
@@ -413,14 +388,15 @@ export default function GlobeMarkers(props: Props) {
 
   return (
     <group>
-      {props.layers.earthquakes && <EventMarkers events={earthquakePositions} color="#ea580c" />}
-      {props.layers.military && <EventMarkers events={militaryPositions} color="#dc2626" pulseSpeed={4} />}
+      {props.layers.earthquakes && <EventMarkers events={earthquakePositions} color="#ff6d00" />}
+      {props.layers.military && <EventMarkers events={militaryPositions} color="#ff1744" pulseSpeed={4} />}
       {props.layers.cyberAttacks && <CyberAttackLines threats={props.cyberThreats} />}
       {props.layers.aircraft && <AircraftMarkers aircraft={props.aircraft} />}
       {props.layers.satellites && <SatelliteMarkers satellites={props.satellites} />}
       {props.layers.ships && <ShipMarkers ships={props.ships} />}
       {props.layers.missiles && props.missiles && <MissileArcs missiles={props.missiles} />}
       {props.layers.infrastructure && props.infrastructure && <InfrastructureMarkers points={props.infrastructure} />}
+      {props.layers.marineAnimals && props.marineAnimals && <MarineAnimalMarkers animals={props.marineAnimals} />}
     </group>
   );
 }

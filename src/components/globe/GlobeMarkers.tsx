@@ -57,7 +57,6 @@ function EventMarkers({ events, color, pulseSpeed = 3 }: { events: { lat: number
     });
     meshRef.current.instanceMatrix.needsUpdate = true;
 
-    // Rings
     if (ringRef.current) {
       const ringScale = 1 + ((pulseRef.current * 0.5) % 1) * 2;
       events.forEach((event, i) => {
@@ -78,11 +77,11 @@ function EventMarkers({ events, color, pulseSpeed = 3 }: { events: { lat: number
     <group>
       <instancedMesh ref={meshRef} args={[undefined, undefined, events.length]}>
         <sphereGeometry args={[1, 8, 8]} />
-        <meshBasicMaterial color={color || '#ff0040'} transparent opacity={0.9} />
+        <meshBasicMaterial color={color || '#ef4444'} transparent opacity={0.9} />
       </instancedMesh>
       <instancedMesh ref={ringRef} args={[undefined, undefined, events.length]}>
         <ringGeometry args={[0.8, 1, 16]} />
-        <meshBasicMaterial color={color || '#ff0040'} transparent opacity={0.3} side={THREE.DoubleSide} />
+        <meshBasicMaterial color={color || '#ef4444'} transparent opacity={0.25} side={THREE.DoubleSide} />
       </instancedMesh>
     </group>
   );
@@ -106,8 +105,8 @@ function CyberAttackLines({ threats }: { threats: CyberThreat[] }) {
       const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
       const points = curve.getPoints(50);
       const geom = new THREE.BufferGeometry().setFromPoints(points);
-      const color = threat.severity === 'critical' ? '#ff0040' : threat.severity === 'high' ? '#ff8800' : '#00aaff';
-      const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.6 });
+      const color = threat.severity === 'critical' ? '#dc2626' : threat.severity === 'high' ? '#ea580c' : '#2563eb';
+      const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.5 });
       return new THREE.Line(geom, mat);
     });
   }, [threats]);
@@ -134,7 +133,7 @@ function MissileArcs({ missiles }: { missiles: MissileEvent[] }) {
         const start = latLngToVector3(m.launchLat, m.launchLng, 2.02);
         const end = latLngToVector3(m.targetLat, m.targetLng, 2.02);
         const mid = start.clone().add(end).multiplyScalar(0.5);
-        mid.normalize().multiplyScalar(3.0); // Higher arc for missiles
+        mid.normalize().multiplyScalar(3.0);
         
         const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
         const point = curve.getPoint(progressRef.current);
@@ -156,7 +155,7 @@ function MissileArcs({ missiles }: { missiles: MissileEvent[] }) {
       const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
       const points = curve.getPoints(60);
       const geom = new THREE.BufferGeometry().setFromPoints(points);
-      const mat = new THREE.LineBasicMaterial({ color: '#ff0040', transparent: true, opacity: 0.8 });
+      const mat = new THREE.LineBasicMaterial({ color: '#dc2626', transparent: true, opacity: 0.7 });
       return new THREE.Line(geom, mat);
     });
   }, [missiles]);
@@ -170,26 +169,25 @@ function MissileArcs({ missiles }: { missiles: MissileEvent[] }) {
       ))}
       <instancedMesh ref={meshRef} args={[undefined, undefined, missiles.length]}>
         <sphereGeometry args={[1, 6, 6]} />
-        <meshBasicMaterial color="#ff0040" />
+        <meshBasicMaterial color="#dc2626" />
       </instancedMesh>
-      {/* Launch markers */}
       <EventMarkers 
         events={missiles.map(m => ({ lat: m.launchLat, lng: m.launchLng }))} 
-        color="#ff4400" 
+        color="#ea580c" 
         pulseSpeed={5}
       />
-      {/* Target markers */}
       <EventMarkers 
         events={missiles.map(m => ({ lat: m.targetLat, lng: m.targetLng }))} 
-        color="#ff0040" 
+        color="#dc2626" 
         pulseSpeed={6}
       />
     </group>
   );
 }
 
+// Aircraft: diamond shape for civilian, triangle for military
 function AircraftMarkers({ aircraft }: { aircraft: AircraftState[] }) {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const civRef = useRef<THREE.InstancedMesh>(null);
   const milRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
@@ -204,17 +202,21 @@ function AircraftMarkers({ aircraft }: { aircraft: AircraftState[] }) {
   }, [aircraft]);
 
   useFrame(() => {
-    if (meshRef.current && civilian.length > 0) {
+    if (civRef.current && civilian.length > 0) {
       civilian.forEach((ac, i) => {
         if (!ac.latitude || !ac.longitude) return;
         const alt = 2.01 + (ac.altitude || 10000) / 1000000;
         const pos = latLngToVector3(ac.latitude, ac.longitude, alt);
         dummy.position.copy(pos);
+        // Orient based on heading
+        if (ac.heading) {
+          dummy.rotation.z = (ac.heading * Math.PI) / 180;
+        }
         dummy.scale.setScalar(0.008);
         dummy.updateMatrix();
-        meshRef.current!.setMatrixAt(i, dummy.matrix);
+        civRef.current!.setMatrixAt(i, dummy.matrix);
       });
-      meshRef.current.instanceMatrix.needsUpdate = true;
+      civRef.current.instanceMatrix.needsUpdate = true;
     }
     if (milRef.current && military.length > 0) {
       military.forEach((ac, i) => {
@@ -222,7 +224,10 @@ function AircraftMarkers({ aircraft }: { aircraft: AircraftState[] }) {
         const alt = 2.01 + (ac.altitude || 10000) / 1000000;
         const pos = latLngToVector3(ac.latitude, ac.longitude, alt);
         dummy.position.copy(pos);
-        dummy.scale.setScalar(0.012);
+        if (ac.heading) {
+          dummy.rotation.z = (ac.heading * Math.PI) / 180;
+        }
+        dummy.scale.setScalar(0.013);
         dummy.updateMatrix();
         milRef.current!.setMatrixAt(i, dummy.matrix);
       });
@@ -232,16 +237,18 @@ function AircraftMarkers({ aircraft }: { aircraft: AircraftState[] }) {
 
   return (
     <group>
+      {/* Civilian: diamond shape */}
       {civilian.length > 0 && (
-        <instancedMesh ref={meshRef} args={[undefined, undefined, civilian.length]}>
-          <boxGeometry args={[1, 0.3, 1.5]} />
-          <meshBasicMaterial color="#00aaff" transparent opacity={0.8} />
+        <instancedMesh ref={civRef} args={[undefined, undefined, civilian.length]}>
+          <octahedronGeometry args={[1, 0]} />
+          <meshBasicMaterial color="#38bdf8" transparent opacity={0.8} />
         </instancedMesh>
       )}
+      {/* Military: larger, red cone */}
       {military.length > 0 && (
         <instancedMesh ref={milRef} args={[undefined, undefined, military.length]}>
-          <boxGeometry args={[1.2, 0.4, 1.8]} />
-          <meshBasicMaterial color="#ff4400" transparent opacity={0.9} />
+          <coneGeometry args={[0.8, 2, 3]} />
+          <meshBasicMaterial color="#ef4444" transparent opacity={0.9} />
         </instancedMesh>
       )}
     </group>
@@ -266,7 +273,6 @@ function SatelliteMarkers({ satellites }: { satellites: SatelliteData[] }) {
     meshRef.current.instanceMatrix.needsUpdate = true;
   });
 
-  // Orbit rings for a few key satellites
   const orbitLines = useMemo(() => {
     return satellites.filter(s => s.category === 'military' || s.name.includes('ISS')).slice(0, 3).map(sat => {
       const points: THREE.Vector3[] = [];
@@ -282,9 +288,9 @@ function SatelliteMarkers({ satellites }: { satellites: SatelliteData[] }) {
       }
       const geom = new THREE.BufferGeometry().setFromPoints(points);
       const mat = new THREE.LineBasicMaterial({ 
-        color: sat.category === 'military' ? '#ff4444' : '#4444ff', 
+        color: sat.category === 'military' ? '#ef4444' : '#6366f1', 
         transparent: true, 
-        opacity: 0.15 
+        opacity: 0.12 
       });
       return new THREE.Line(geom, mat);
     });
@@ -296,7 +302,7 @@ function SatelliteMarkers({ satellites }: { satellites: SatelliteData[] }) {
     <group>
       <instancedMesh ref={meshRef} args={[undefined, undefined, satellites.length]}>
         <octahedronGeometry args={[1, 0]} />
-        <meshBasicMaterial color="#8888ff" transparent opacity={0.7} />
+        <meshBasicMaterial color="#818cf8" transparent opacity={0.7} />
       </instancedMesh>
       <group ref={orbitRef}>
         {orbitLines.map((obj, i) => (
@@ -307,8 +313,9 @@ function SatelliteMarkers({ satellites }: { satellites: SatelliteData[] }) {
   );
 }
 
+// Ships: wedge for civilian, larger pentagon for naval
 function ShipMarkers({ ships }: { ships: ShipData[] }) {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const civRef = useRef<THREE.InstancedMesh>(null);
   const navalRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
@@ -319,21 +326,23 @@ function ShipMarkers({ ships }: { ships: ShipData[] }) {
   }, [ships]);
 
   useFrame(() => {
-    if (meshRef.current && civShips.length > 0) {
+    if (civRef.current && civShips.length > 0) {
       civShips.forEach((ship, i) => {
         const pos = latLngToVector3(ship.lat, ship.lng, 2.005);
         dummy.position.copy(pos);
-        dummy.scale.setScalar(0.012);
+        dummy.rotation.z = (ship.heading * Math.PI) / 180;
+        dummy.scale.setScalar(0.01);
         dummy.updateMatrix();
-        meshRef.current!.setMatrixAt(i, dummy.matrix);
+        civRef.current!.setMatrixAt(i, dummy.matrix);
       });
-      meshRef.current.instanceMatrix.needsUpdate = true;
+      civRef.current.instanceMatrix.needsUpdate = true;
     }
     if (navalRef.current && naval.length > 0) {
       naval.forEach((ship, i) => {
         const pos = latLngToVector3(ship.lat, ship.lng, 2.005);
         dummy.position.copy(pos);
-        dummy.scale.setScalar(0.02);
+        dummy.rotation.z = (ship.heading * Math.PI) / 180;
+        dummy.scale.setScalar(0.018);
         dummy.updateMatrix();
         navalRef.current!.setMatrixAt(i, dummy.matrix);
       });
@@ -343,16 +352,18 @@ function ShipMarkers({ ships }: { ships: ShipData[] }) {
 
   return (
     <group>
+      {/* Civilian ships: small wedge */}
       {civShips.length > 0 && (
-        <instancedMesh ref={meshRef} args={[undefined, undefined, civShips.length]}>
-          <coneGeometry args={[1, 2, 4]} />
-          <meshBasicMaterial color="#00ff88" transparent opacity={0.7} />
+        <instancedMesh ref={civRef} args={[undefined, undefined, civShips.length]}>
+          <coneGeometry args={[0.6, 2, 4]} />
+          <meshBasicMaterial color="#34d399" transparent opacity={0.7} />
         </instancedMesh>
       )}
+      {/* Naval: red, larger */}
       {naval.length > 0 && (
         <instancedMesh ref={navalRef} args={[undefined, undefined, naval.length]}>
-          <coneGeometry args={[1, 2, 4]} />
-          <meshBasicMaterial color="#ff4400" transparent opacity={0.9} />
+          <coneGeometry args={[0.8, 2.5, 5]} />
+          <meshBasicMaterial color="#f87171" transparent opacity={0.9} />
         </instancedMesh>
       )}
     </group>
@@ -362,14 +373,6 @@ function ShipMarkers({ ships }: { ships: ShipData[] }) {
 function InfrastructureMarkers({ points }: { points: InfrastructurePoint[] }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
-
-  const colorMap: Record<string, string> = {
-    airport: '#00ccff',
-    port: '#00ff88',
-    military_base: '#ff4400',
-    nuclear_plant: '#ffff00',
-    data_center: '#aa88ff',
-  };
 
   useFrame(() => {
     if (!meshRef.current || points.length === 0) return;
@@ -388,7 +391,7 @@ function InfrastructureMarkers({ points }: { points: InfrastructurePoint[] }) {
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, points.length]}>
       <boxGeometry args={[1, 1, 1]} />
-      <meshBasicMaterial color="#ffaa00" transparent opacity={0.6} />
+      <meshBasicMaterial color="#f59e0b" transparent opacity={0.5} />
     </instancedMesh>
   );
 }
@@ -406,8 +409,8 @@ export default function GlobeMarkers(props: Props) {
 
   return (
     <group>
-      {props.layers.earthquakes && <EventMarkers events={earthquakePositions} color="#ff6600" />}
-      {props.layers.military && <EventMarkers events={militaryPositions} color="#ff0040" pulseSpeed={4} />}
+      {props.layers.earthquakes && <EventMarkers events={earthquakePositions} color="#ea580c" />}
+      {props.layers.military && <EventMarkers events={militaryPositions} color="#dc2626" pulseSpeed={4} />}
       {props.layers.cyberAttacks && <CyberAttackLines threats={props.cyberThreats} />}
       {props.layers.aircraft && <AircraftMarkers aircraft={props.aircraft} />}
       {props.layers.satellites && <SatelliteMarkers satellites={props.satellites} />}

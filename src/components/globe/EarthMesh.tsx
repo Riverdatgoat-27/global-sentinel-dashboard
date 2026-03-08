@@ -1,17 +1,66 @@
 import { useRef, useMemo } from 'react';
 import { useFrame, extend } from '@react-three/fiber';
 import * as THREE from 'three';
+import { countryLabels } from '@/data/mockData';
 
-// Extend Three.js line for R3F
 extend({ Line_: THREE.Line });
 
-// Wireframe globe that looks cyberpunk/tactical
+function latLngToVec3(lat: number, lng: number, r = 2.005): THREE.Vector3 {
+  const phi = (90 - lat) * (Math.PI / 180);
+  const theta = (lng + 180) * (Math.PI / 180);
+  return new THREE.Vector3(
+    -r * Math.sin(phi) * Math.cos(theta),
+    r * Math.cos(phi),
+    r * Math.sin(phi) * Math.sin(theta)
+  );
+}
+
+// Create text sprite for labels
+function createTextSprite(text: string, size: 'large' | 'medium' | 'small'): THREE.Sprite {
+  const canvas = document.createElement('canvas');
+  const fontSize = size === 'large' ? 28 : size === 'medium' ? 20 : 14;
+  const padding = 4;
+  
+  canvas.width = 256;
+  canvas.height = 64;
+  
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  ctx.font = `${fontSize}px "Inter", "IBM Plex Mono", sans-serif`;
+  ctx.fillStyle = size === 'large' 
+    ? 'rgba(140, 160, 190, 0.6)' 
+    : size === 'medium' 
+      ? 'rgba(120, 140, 165, 0.45)' 
+      : 'rgba(100, 120, 145, 0.3)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.letterSpacing = '2px';
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  
+  const mat = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthWrite: false,
+    sizeAttenuation: true,
+  });
+  
+  const sprite = new THREE.Sprite(mat);
+  const scale = size === 'large' ? 0.6 : size === 'medium' ? 0.4 : 0.28;
+  sprite.scale.set(scale * 2, scale * 0.5, 1);
+  
+  return sprite;
+}
+
 export default function EarthMesh() {
   const groupRef = useRef<THREE.Group>(null);
 
   useFrame((_, delta) => {
     if (groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.03;
+      groupRef.current.rotation.y += delta * 0.025;
     }
   });
 
@@ -123,11 +172,20 @@ export default function EarthMesh() {
     return continents;
   }, []);
 
-  // Build line objects
+  // Country label sprites
+  const labelSprites = useMemo(() => {
+    return countryLabels.map(label => {
+      const sprite = createTextSprite(label.name, label.size);
+      const pos = latLngToVec3(label.lat, label.lng, 2.03);
+      sprite.position.copy(pos);
+      return sprite;
+    });
+  }, []);
+
   const gridLineObjects = useMemo(() =>
     gridLines.map(l => {
       const geom = new THREE.BufferGeometry().setFromPoints(l.points);
-      const mat = new THREE.LineBasicMaterial({ color: '#0a3d0a', transparent: true, opacity: 0.15 });
+      const mat = new THREE.LineBasicMaterial({ color: '#1a2540', transparent: true, opacity: 0.2 });
       return new THREE.Line(geom, mat);
     }),
     [gridLines]
@@ -136,7 +194,7 @@ export default function EarthMesh() {
   const continentLineObjects = useMemo(() =>
     continentPoints.map(pts => {
       const geom = new THREE.BufferGeometry().setFromPoints(pts);
-      const mat = new THREE.LineBasicMaterial({ color: '#00ff41', transparent: true, opacity: 0.6 });
+      const mat = new THREE.LineBasicMaterial({ color: '#4a7ab5', transparent: true, opacity: 0.5 });
       return new THREE.Line(geom, mat);
     }),
     [continentPoints]
@@ -144,26 +202,35 @@ export default function EarthMesh() {
 
   return (
     <group ref={groupRef}>
+      {/* Globe sphere */}
       <mesh>
         <sphereGeometry args={[1.99, 64, 64]} />
-        <meshBasicMaterial color="#050a12" transparent opacity={0.95} />
+        <meshBasicMaterial color="#080e18" transparent opacity={0.97} />
       </mesh>
 
+      {/* Grid lines */}
       {gridLineObjects.map((obj, i) => (
         <primitive key={`grid-${i}`} object={obj} />
       ))}
 
+      {/* Continent outlines */}
       {continentLineObjects.map((obj, i) => (
         <primitive key={`cont-${i}`} object={obj} />
       ))}
 
+      {/* Country labels */}
+      {labelSprites.map((sprite, i) => (
+        <primitive key={`label-${i}`} object={sprite} />
+      ))}
+
+      {/* Atmosphere glow */}
       <mesh>
-        <sphereGeometry args={[2.15, 64, 64]} />
-        <meshBasicMaterial color="#00ff41" transparent opacity={0.03} side={THREE.BackSide} />
+        <sphereGeometry args={[2.12, 64, 64]} />
+        <meshBasicMaterial color="#2563eb" transparent opacity={0.025} side={THREE.BackSide} />
       </mesh>
       <mesh>
-        <sphereGeometry args={[2.25, 64, 64]} />
-        <meshBasicMaterial color="#003311" transparent opacity={0.02} side={THREE.BackSide} />
+        <sphereGeometry args={[2.22, 64, 64]} />
+        <meshBasicMaterial color="#1e40af" transparent opacity={0.015} side={THREE.BackSide} />
       </mesh>
     </group>
   );

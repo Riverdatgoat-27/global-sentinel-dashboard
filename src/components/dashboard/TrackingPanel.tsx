@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Plane, Ship, Satellite } from 'lucide-react';
+import { Plane, Ship, Satellite, Navigation, Gauge, Compass } from 'lucide-react';
 import type { AircraftState, SatelliteData, ShipData } from '@/types/intelligence';
 
 interface Props {
@@ -12,87 +12,123 @@ export default function TrackingPanel({ aircraft, satellites, ships }: Props) {
   return (
     <div className="panel h-full flex flex-col">
       <div className="panel-header">
-        <Satellite className="w-3.5 h-3.5 text-neon-blue" />
+        <Navigation className="w-3.5 h-3.5 text-neon-blue" />
         Asset Tracking
+        <span className="ml-auto text-[9px] text-muted-foreground font-mono">
+          {aircraft.length + ships.length + satellites.length} TOTAL
+        </span>
       </div>
       <div className="flex-1 overflow-y-auto">
         {/* Aircraft section */}
         <div className="px-2.5 py-1.5 border-b border-border bg-muted/20">
-          <div className="flex items-center gap-1.5 text-[9px] font-display text-neon-cyan tracking-wider">
+          <div className="flex items-center gap-1.5 text-[9px] font-mono text-neon-cyan tracking-wider">
             <Plane className="w-3 h-3" />
             AIRCRAFT ({aircraft.length})
           </div>
         </div>
-        {aircraft.slice(0, 5).map((ac, i) => (
+        {aircraft.slice(0, 6).map((ac, i) => (
           <motion.div
             key={ac.icao24}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: i * 0.03 }}
-            className="px-2.5 py-1.5 border-b border-border text-[10px]"
+            className="px-2.5 py-1.5 border-b border-border text-[10px] hover:bg-muted/20 transition-colors"
           >
-            <div className="flex justify-between">
-              <span className="text-foreground font-semibold">{ac.callsign || ac.icao24}</span>
-              <span className="text-muted-foreground">{ac.originCountry}</span>
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-1.5">
+                <span className={`font-mono font-semibold ${ac.callsign?.startsWith('MIL') ? 'text-neon-red' : 'text-foreground'}`}>
+                  {ac.callsign || ac.icao24}
+                </span>
+                <span className="text-[8px] text-muted-foreground px-1 py-0 rounded bg-muted/50">
+                  {ac.icao24.toUpperCase()}
+                </span>
+              </div>
+              <span className="text-[9px] text-muted-foreground">{ac.originCountry}</span>
             </div>
-            <div className="flex gap-3 text-[9px] text-muted-foreground mt-0.5">
-              <span>ALT: {ac.altitude ? Math.round(ac.altitude) + 'm' : 'N/A'}</span>
-              <span>SPD: {ac.velocity ? Math.round(ac.velocity) + 'kts' : 'N/A'}</span>
-              <span>HDG: {ac.heading ? Math.round(ac.heading) + '°' : 'N/A'}</span>
+            <div className="flex gap-2 text-[9px] text-muted-foreground mt-0.5 font-mono">
+              <span className="flex items-center gap-0.5">
+                <Gauge className="w-2.5 h-2.5" />
+                {ac.altitude ? `FL${Math.round(ac.altitude / 30.48).toString().padStart(3, '0')}` : 'GND'}
+              </span>
+              <span>{ac.velocity ? `${Math.round(ac.velocity)}kts` : '---'}</span>
+              <span className="flex items-center gap-0.5">
+                <Compass className="w-2.5 h-2.5" />
+                {ac.heading ? `${Math.round(ac.heading)}°` : '---'}
+              </span>
+              {ac.latitude && ac.longitude && (
+                <span className="text-[8px]">
+                  {ac.latitude.toFixed(2)}°, {ac.longitude.toFixed(2)}°
+                </span>
+              )}
             </div>
           </motion.div>
         ))}
 
         {/* Ships section */}
         <div className="px-2.5 py-1.5 border-b border-border bg-muted/20">
-          <div className="flex items-center gap-1.5 text-[9px] font-display text-neon-green tracking-wider">
+          <div className="flex items-center gap-1.5 text-[9px] font-mono text-neon-green tracking-wider">
             <Ship className="w-3 h-3" />
             VESSELS ({ships.length})
           </div>
         </div>
-        {ships.slice(0, 4).map((ship, i) => (
+        {ships.slice(0, 5).map((ship, i) => (
           <motion.div
             key={ship.id}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: i * 0.03 }}
-            className="px-2.5 py-1.5 border-b border-border text-[10px]"
+            className="px-2.5 py-1.5 border-b border-border text-[10px] hover:bg-muted/20 transition-colors"
           >
-            <div className="flex justify-between">
-              <span className={`font-semibold ${ship.type === 'naval' ? 'text-neon-red' : 'text-foreground'}`}>
-                {ship.flag} {ship.name}
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs">{ship.flag}</span>
+                <span className={`font-mono font-semibold ${ship.type === 'naval' ? 'text-neon-red' : 'text-foreground'}`}>
+                  {ship.name}
+                </span>
+              </div>
+              <span className={`text-[8px] px-1 rounded ${
+                ship.type === 'naval' ? 'bg-neon-red/10 text-neon-red' : 'bg-muted/50 text-muted-foreground'
+              }`}>
+                {ship.type.toUpperCase()}
               </span>
-              <span className="text-[8px] text-muted-foreground uppercase">{ship.type}</span>
             </div>
-            <div className="flex gap-3 text-[9px] text-muted-foreground mt-0.5">
-              <span>SPD: {ship.speed}kts</span>
-              <span>HDG: {ship.heading}°</span>
+            <div className="flex gap-2 text-[9px] text-muted-foreground mt-0.5 font-mono">
+              <span>{ship.speed}kts</span>
+              <span className="flex items-center gap-0.5">
+                <Compass className="w-2.5 h-2.5" />
+                {ship.heading}°
+              </span>
+              <span className="text-[8px]">{ship.lat.toFixed(2)}°, {ship.lng.toFixed(2)}°</span>
             </div>
           </motion.div>
         ))}
 
         {/* Satellites section */}
         <div className="px-2.5 py-1.5 border-b border-border bg-muted/20">
-          <div className="flex items-center gap-1.5 text-[9px] font-display text-neon-blue tracking-wider">
+          <div className="flex items-center gap-1.5 text-[9px] font-mono text-neon-blue tracking-wider">
             <Satellite className="w-3 h-3" />
             SATELLITES ({satellites.length})
           </div>
         </div>
-        {satellites.slice(0, 4).map((sat, i) => (
+        {satellites.slice(0, 5).map((sat, i) => (
           <motion.div
             key={sat.id}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: i * 0.03 }}
-            className="px-2.5 py-1.5 border-b border-border text-[10px]"
+            className="px-2.5 py-1.5 border-b border-border text-[10px] hover:bg-muted/20 transition-colors"
           >
-            <div className="flex justify-between">
-              <span className={`font-semibold ${sat.category === 'military' ? 'text-neon-red' : 'text-foreground'}`}>
+            <div className="flex justify-between items-center">
+              <span className={`font-mono font-semibold ${sat.category === 'military' ? 'text-neon-red' : 'text-foreground'}`}>
                 {sat.name}
               </span>
-              <span className="text-[8px] text-muted-foreground uppercase">{sat.category}</span>
+              <span className={`text-[8px] px-1 rounded ${
+                sat.category === 'military' ? 'bg-neon-red/10 text-neon-red' : 'bg-muted/50 text-muted-foreground'
+              }`}>
+                {sat.category.toUpperCase()}
+              </span>
             </div>
-            <div className="flex gap-3 text-[9px] text-muted-foreground mt-0.5">
+            <div className="flex gap-2 text-[9px] text-muted-foreground mt-0.5 font-mono">
               <span>ALT: {Math.round(sat.altitude)}km</span>
               <span>VEL: {sat.velocity.toFixed(1)}km/s</span>
               <span>{sat.country}</span>

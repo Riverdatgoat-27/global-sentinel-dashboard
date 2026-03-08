@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { SatelliteData, ShipData, CyberThreat, GlobeEvent, MissileEvent, AlertNotification, MarineAnimal } from '@/types/intelligence';
+import type { SatelliteData, ShipData, CyberThreat, GlobeEvent, MissileEvent, AlertNotification, MarineAnimal, SubmarineData } from '@/types/intelligence';
 import { missileEvents as staticMissiles } from '@/data/mockData';
 
 function generateSatellites(): SatelliteData[] {
@@ -13,18 +13,13 @@ function generateSatellites(): SatelliteData[] {
     'BEIDOU-3 M23', 'GLONASS-M 747', 'IRIDIUM 180', 'ORBCOMM FM116', 'COSMOS 2560',
     'STARLINK-6001', 'STARLINK-6002', 'STARLINK-6003', 'TDRS-13', 'NROL-82',
   ];
-
   for (let i = 0; i < 25; i++) {
     const t = Date.now() / 1000 + i * 1000;
     satellites.push({
-      id: `sat-${i}`,
-      name: names[i] || `SAT-${i}`,
-      lat: Math.sin(t * 0.001 + i) * 60,
-      lng: ((t * 0.05 + i * 36) % 360) - 180,
-      altitude: 400 + Math.random() * 35000,
-      velocity: 7.5 + Math.random() * 3,
-      category: categories[i % categories.length],
-      country: countries[i % countries.length],
+      id: `sat-${i}`, name: names[i] || `SAT-${i}`,
+      lat: Math.sin(t * 0.001 + i) * 60, lng: ((t * 0.05 + i * 36) % 360) - 180,
+      altitude: 400 + Math.random() * 35000, velocity: 7.5 + Math.random() * 3,
+      category: categories[i % categories.length], country: countries[i % countries.length],
     });
   }
   return satellites;
@@ -60,6 +55,41 @@ function moveShips(ships: ShipData[]): ShipData[] {
     if (newLng < -180) newLng += 360;
     newLat = Math.max(-85, Math.min(85, newLat));
     return { ...ship, lat: newLat, lng: newLng, heading: newHeading };
+  });
+}
+
+function generateSubmarines(): SubmarineData[] {
+  return [
+    { id: 'sub-1', name: 'USS Ohio (SSGN-726)', lat: 20.5, lng: -158.0, depth: 150, speed: 12, heading: 270, type: 'cruise_missile', country: 'USA', flag: '🇺🇸', class: 'Ohio-class SSGN', status: 'patrol' },
+    { id: 'sub-2', name: 'USS Virginia (SSN-774)', lat: 36.8, lng: -6.5, depth: 200, speed: 25, heading: 90, type: 'attack', country: 'USA', flag: '🇺🇸', class: 'Virginia-class', status: 'patrol' },
+    { id: 'sub-3', name: 'USS Columbia (SSBN-826)', lat: 47.5, lng: -125.0, depth: 300, speed: 20, heading: 315, type: 'ballistic', country: 'USA', flag: '🇺🇸', class: 'Columbia-class', status: 'patrol' },
+    { id: 'sub-4', name: 'HMS Vanguard (S28)', lat: 57.0, lng: -10.0, depth: 250, speed: 18, heading: 180, type: 'ballistic', country: 'UK', flag: '🇬🇧', class: 'Vanguard-class', status: 'patrol' },
+    { id: 'sub-5', name: 'K-329 Belgorod', lat: 72.0, lng: 35.0, depth: 350, speed: 15, heading: 45, type: 'cruise_missile', country: 'Russia', flag: '🇷🇺', class: 'Oscar-II mod', status: 'patrol' },
+    { id: 'sub-6', name: 'K-549 Knyaz Vladimir', lat: 68.0, lng: 40.0, depth: 400, speed: 20, heading: 0, type: 'ballistic', country: 'Russia', flag: '🇷🇺', class: 'Borei-A class', status: 'patrol' },
+    { id: 'sub-7', name: 'Yasen-M Kazan', lat: 55.0, lng: -30.0, depth: 280, speed: 28, heading: 240, type: 'attack', country: 'Russia', flag: '🇷🇺', class: 'Yasen-M class', status: 'transit' },
+    { id: 'sub-8', name: 'Type 094A Jin-class', lat: 18.0, lng: 112.0, depth: 200, speed: 16, heading: 135, type: 'ballistic', country: 'China', flag: '🇨🇳', class: 'Type 094A', status: 'patrol' },
+    { id: 'sub-9', name: 'Type 095 Attack Sub', lat: 22.0, lng: 115.0, depth: 250, speed: 30, heading: 90, type: 'attack', country: 'China', flag: '🇨🇳', class: 'Type 095', status: 'exercise' },
+    { id: 'sub-10', name: 'Le Terrible (S619)', lat: 48.5, lng: -5.0, depth: 300, speed: 22, heading: 270, type: 'ballistic', country: 'France', flag: '🇫🇷', class: 'Triomphant-class', status: 'patrol' },
+    { id: 'sub-11', name: 'INS Arihant (S2)', lat: 13.0, lng: 80.0, depth: 150, speed: 14, heading: 90, type: 'ballistic', country: 'India', flag: '🇮🇳', class: 'Arihant-class', status: 'port' },
+    { id: 'sub-12', name: 'Soryu-class Hakuryu', lat: 33.0, lng: 132.0, depth: 180, speed: 20, heading: 180, type: 'diesel', country: 'Japan', flag: '🇯🇵', class: 'Soryu-class', status: 'exercise' },
+  ];
+}
+
+function moveSubmarines(subs: SubmarineData[]): SubmarineData[] {
+  return subs.map(s => {
+    if (s.status === 'port') return s;
+    const speedFactor = s.speed * 0.00003;
+    const headingRad = (s.heading * Math.PI) / 180;
+    let newLat = s.lat + Math.cos(headingRad) * speedFactor;
+    let newLng = s.lng + Math.sin(headingRad) * speedFactor;
+    let newHeading = s.heading + (Math.random() - 0.5) * 3;
+    if (newHeading < 0) newHeading += 360;
+    if (newHeading >= 360) newHeading -= 360;
+    if (newLng > 180) newLng -= 360;
+    if (newLng < -180) newLng += 360;
+    newLat = Math.max(-85, Math.min(85, newLat));
+    const newDepth = Math.max(50, Math.min(500, s.depth + (Math.random() - 0.5) * 10));
+    return { ...s, lat: newLat, lng: newLng, heading: newHeading, depth: newDepth };
   });
 }
 
@@ -138,6 +168,7 @@ function generateAlerts(cyberThreats: CyberThreat[], militaryEvents: GlobeEvent[
 export function useSimulatedData() {
   const [satellites, setSatellites] = useState<SatelliteData[]>([]);
   const [ships, setShips] = useState<ShipData[]>([]);
+  const [submarines, setSubmarines] = useState<SubmarineData[]>([]);
   const [marineAnimals, setMarineAnimals] = useState<MarineAnimal[]>([]);
   const [cyberThreats] = useState<CyberThreat[]>(generateCyberThreats());
   const [militaryEvents] = useState<GlobeEvent[]>(generateMilitaryEvents());
@@ -153,17 +184,19 @@ export function useSimulatedData() {
 
   useEffect(() => {
     setShips(generateShips());
-    const interval = setInterval(() => {
-      setShips(prev => moveShips(prev));
-    }, 3000);
+    const interval = setInterval(() => setShips(prev => moveShips(prev)), 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    setSubmarines(generateSubmarines());
+    const interval = setInterval(() => setSubmarines(prev => moveSubmarines(prev)), 4000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     setMarineAnimals(generateMarineAnimals());
-    const interval = setInterval(() => {
-      setMarineAnimals(prev => moveMarineAnimals(prev));
-    }, 4000);
+    const interval = setInterval(() => setMarineAnimals(prev => moveMarineAnimals(prev)), 4000);
     return () => clearInterval(interval);
   }, []);
 
@@ -175,5 +208,5 @@ export function useSimulatedData() {
     setAlerts(prev => prev.map(a => a.id === id ? { ...a, acknowledged: true } : a));
   }, []);
 
-  return { satellites, ships, marineAnimals, cyberThreats, militaryEvents, missiles, alerts, acknowledgeAlert };
+  return { satellites, ships, submarines, marineAnimals, cyberThreats, militaryEvents, missiles, alerts, acknowledgeAlert };
 }

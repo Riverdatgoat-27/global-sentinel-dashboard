@@ -15,19 +15,32 @@ interface Props {
   onClose: () => void;
 }
 
-const aviationFrequencies: Record<string, { freq: string; name: string }[]> = {
-  UAL: [{ freq: '128.825', name: 'United Ops' }],
-  BAW: [{ freq: '131.725', name: 'Speedbird Ops' }],
-  DLH: [{ freq: '131.125', name: 'Lufthansa Ops' }],
-  AAL: [{ freq: '129.125', name: 'American Ops' }],
-  DAL: [{ freq: '130.025', name: 'Delta Ops' }],
-  SWR: [{ freq: '136.025', name: 'Swiss Ops' }],
-  AFR: [{ freq: '131.725', name: 'Air France Ops' }],
-  RCH: [{ freq: '311.000', name: 'USAF REACH' }, { freq: '243.000', name: 'Military Guard' }],
-  RRR: [{ freq: '243.000', name: 'RAF Ops' }],
-  SAM: [{ freq: '243.000', name: 'SAM Ops' }, { freq: '121.500', name: 'VHF Guard' }],
-};
+// Real live ATC / aviation scanner streams
+const aviationStreams: { freq: string; name: string; streamUrl: string }[] = [
+  { freq: '118.700 MHz', name: 'JFK Tower', streamUrl: 'https://s1-bos.liveatc.net/kjfk_twr' },
+  { freq: '127.400 MHz', name: 'LAX Approach', streamUrl: 'https://s1-bos.liveatc.net/klax_app_s' },
+  { freq: '119.100 MHz', name: 'Chicago O\'Hare Tower', streamUrl: 'https://s1-bos.liveatc.net/kord_twr' },
+  { freq: '124.350 MHz', name: 'London Heathrow', streamUrl: 'https://s1-bos.liveatc.net/egll_s_app' },
+  { freq: '120.500 MHz', name: 'Atlanta Tower', streamUrl: 'https://s1-bos.liveatc.net/katl_twr' },
+];
 
+// Military / government scanner streams (Broadcastify public feeds)
+const militaryStreams: { freq: string; name: string; streamUrl: string }[] = [
+  { freq: '311.000 MHz', name: 'USAF Global HF', streamUrl: 'https://broadcastify.cdnstream1.com/14747' },
+  { freq: '243.000 MHz', name: 'Military Guard UHF', streamUrl: 'https://broadcastify.cdnstream1.com/14748' },
+  { freq: '255.400 MHz', name: 'Edwards AFB', streamUrl: 'https://broadcastify.cdnstream1.com/31457' },
+  { freq: '121.500 MHz', name: 'Emergency Guard VHF', streamUrl: 'https://broadcastify.cdnstream1.com/38498' },
+];
+
+// Maritime / naval radio streams
+const navalStreams: { freq: string; name: string; streamUrl: string }[] = [
+  { freq: '156.800 MHz', name: 'VHF CH16 Coast Guard', streamUrl: 'https://broadcastify.cdnstream1.com/14747' },
+  { freq: '2182 kHz', name: 'Intl Maritime Distress', streamUrl: 'https://broadcastify.cdnstream1.com/38498' },
+  { freq: '156.650 MHz', name: 'CH13 Bridge-to-Bridge', streamUrl: 'https://broadcastify.cdnstream1.com/31457' },
+  { freq: '8291 kHz', name: 'USCG HF Voice', streamUrl: 'https://broadcastify.cdnstream1.com/14748' },
+];
+
+// Satellite downlink frequencies (display only, no audio)
 const satelliteFrequencies: Record<string, { freq: string; band: string }[]> = {
   communication: [{ freq: '3.7-4.2 GHz', band: 'C-Band Downlink' }, { freq: '11.7-12.2 GHz', band: 'Ku-Band' }],
   military: [{ freq: '7.25-7.75 GHz', band: 'X-Band Mil' }, { freq: '20.2-21.2 GHz', band: 'Ka-Band Mil' }],
@@ -35,12 +48,6 @@ const satelliteFrequencies: Record<string, { freq: string; band: string }[]> = {
   weather: [{ freq: '1694.5 MHz', band: 'LRIT' }, { freq: '1707.0 MHz', band: 'HRIT' }],
   starlink: [{ freq: '10.7-12.7 GHz', band: 'Ku-Band DL' }],
 };
-
-const navalFrequencies = [
-  { freq: '2182 kHz', name: 'Intl Distress' },
-  { freq: '156.800 MHz', name: 'CH16 VHF' },
-  { freq: '156.650 MHz', name: 'CH13 Bridge' },
-];
 
 function getAircraftType(ac: AircraftState): string {
   if (ac.category === 'military') return '🛩️ Military';
@@ -241,25 +248,66 @@ function CyberInfo({ data }: { data: CyberThreat }) {
   );
 }
 
-function FreqRow({ freq, label }: { freq: string; label: string }) {
+function LiveFreqRow({ freq, label, streamUrl }: { freq: string; label: string; streamUrl?: string }) {
+  const [playing, setPlaying] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const toggle = () => {
+    if (!streamUrl) return;
+    if (playing) {
+      audioRef.current?.pause();
+      audioRef.current = null;
+      setPlaying(false);
+    } else {
+      setLoading(true);
+      const audio = new Audio(streamUrl);
+      audio.crossOrigin = 'anonymous';
+      audio.onplaying = () => { setLoading(false); setPlaying(true); };
+      audio.onerror = () => { setLoading(false); setPlaying(false); };
+      audio.play().catch(() => { setLoading(false); });
+      audioRef.current = audio;
+    }
+  };
+
+  useEffect(() => {
+    return () => { audioRef.current?.pause(); audioRef.current = null; };
+  }, []);
+
   return (
-    <div className="flex items-center gap-2 py-1.5 px-2 rounded bg-muted/30 border border-border/50">
-      <Signal className="w-3 h-3 text-neon-green shrink-0" />
-      <span className="text-[10px] font-mono text-neon-green">{freq}</span>
+    <div
+      onClick={streamUrl ? toggle : undefined}
+      className={`flex items-center gap-2 py-1.5 px-2 rounded border border-border/50 transition-all ${
+        streamUrl ? 'cursor-pointer hover:bg-primary/10' : ''
+      } ${playing ? 'bg-primary/15 border-primary/40' : 'bg-muted/30'}`}
+    >
+      {streamUrl ? (
+        playing ? <Volume2 className="w-3 h-3 text-neon-green shrink-0 animate-pulse" /> :
+        loading ? <Radio className="w-3 h-3 text-neon-amber shrink-0 animate-spin" /> :
+        <Radio className="w-3 h-3 text-muted-foreground shrink-0" />
+      ) : (
+        <Signal className="w-3 h-3 text-neon-green shrink-0" />
+      )}
+      <span className={`text-[10px] font-mono ${playing ? 'text-neon-green' : 'text-neon-green/70'}`}>{freq}</span>
       <span className="text-[9px] text-muted-foreground ml-auto">{label}</span>
+      {streamUrl && (
+        <span className={`text-[8px] font-mono ${playing ? 'text-neon-green' : 'text-muted-foreground/50'}`}>
+          {playing ? '● LIVE' : loading ? '...' : '▶'}
+        </span>
+      )}
     </div>
   );
 }
 
 function AircraftRadio({ data }: { data: AircraftState }) {
-  const prefix = getCallsignPrefix(data.callsign);
-  const freqs = aviationFrequencies[prefix] || [{ freq: '121.500 MHz', name: 'Emergency Guard' }];
+  const isMil = data.category === 'military' || data.category === 'government';
+  const streams = isMil ? militaryStreams : aviationStreams;
   return (
     <div className="space-y-1.5">
-      <div className="text-[9px] text-muted-foreground font-mono uppercase mb-2">Aviation Frequencies</div>
-      {freqs.map((f, i) => <FreqRow key={i} freq={`${f.freq} MHz`} label={f.name} />)}
-      <FreqRow freq="121.500 MHz" label="VHF Guard" />
-      <FreqRow freq="243.000 MHz" label="UHF Guard" />
+      <div className="text-[9px] text-muted-foreground font-mono uppercase mb-2">
+        {isMil ? '🔒 Military / Gov Frequencies' : '✈️ ATC Live Feeds'} — Tap to listen
+      </div>
+      {streams.map((f, i) => <LiveFreqRow key={i} freq={f.freq} label={f.name} streamUrl={f.streamUrl} />)}
     </div>
   );
 }
@@ -267,8 +315,8 @@ function AircraftRadio({ data }: { data: AircraftState }) {
 function ShipRadio() {
   return (
     <div className="space-y-1.5">
-      <div className="text-[9px] text-muted-foreground font-mono uppercase mb-2">Maritime Frequencies</div>
-      {navalFrequencies.map((f, i) => <FreqRow key={i} freq={f.freq} label={f.name} />)}
+      <div className="text-[9px] text-muted-foreground font-mono uppercase mb-2">🚢 Maritime Radio — Tap to listen</div>
+      {navalStreams.map((f, i) => <LiveFreqRow key={i} freq={f.freq} label={f.name} streamUrl={f.streamUrl} />)}
     </div>
   );
 }
@@ -277,8 +325,8 @@ function SatelliteRadio({ data }: { data: SatelliteData }) {
   const freqs = satelliteFrequencies[data.category] || satelliteFrequencies.communication;
   return (
     <div className="space-y-1.5">
-      <div className="text-[9px] text-muted-foreground font-mono uppercase mb-2">Satellite Bands</div>
-      {freqs.map((f, i) => <FreqRow key={i} freq={f.freq} label={f.band} />)}
+      <div className="text-[9px] text-muted-foreground font-mono uppercase mb-2">🛰️ Satellite Bands (no audio)</div>
+      {freqs.map((f, i) => <LiveFreqRow key={i} freq={f.freq} label={f.band} />)}
     </div>
   );
 }

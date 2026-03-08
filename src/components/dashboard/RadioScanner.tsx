@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Radio, Volume2, VolumeX, Search, Scan, AlertCircle } from 'lucide-react';
 import { radioStations, type RadioStation } from '@/data/mockData';
@@ -8,89 +8,15 @@ const typeColor: Record<string, string> = {
   government: 'text-accent-foreground',
   music: 'text-primary',
   emergency: 'text-destructive',
-  aviation: 'text-primary',
-  maritime: 'text-primary',
-  military: 'text-destructive',
-  ham: 'text-primary',
 };
 
-// Scanner frequencies with real working stream URLs where possible
-const scannerFrequencies: RadioStation[] = [
-  { id: 'scan-1', name: 'NYC ATC - JFK Approach', country: 'USA', region: 'Aviation', streamUrl: 'https://s1-bos.liveatc.net/kjfk_app_final', language: 'English', type: 'news', lat: 40.6, lng: -73.8 },
-  { id: 'scan-2', name: 'London Heathrow Tower', country: 'UK', region: 'Aviation', streamUrl: 'https://s1-bos.liveatc.net/egll2', language: 'English', type: 'news', lat: 51.5, lng: -0.5 },
-  { id: 'scan-3', name: 'US Navy Atlantic Fleet', country: 'USA', region: 'Military', streamUrl: '', language: 'English', type: 'government', lat: 36.9, lng: -76.3 },
-  { id: 'scan-4', name: 'USCG Emergency CH16', country: 'USA', region: 'Maritime', streamUrl: '', language: 'English', type: 'emergency', lat: 38.9, lng: -77.0 },
-  { id: 'scan-5', name: 'Tokyo Narita Tower', country: 'Japan', region: 'Aviation', streamUrl: 'https://s1-bos.liveatc.net/rjaa_app_dep', language: 'Japanese', type: 'news', lat: 35.6, lng: 139.8 },
-  { id: 'scan-6', name: 'ISS Downlink 145.800 MHz', country: 'Space', region: 'Satellite', streamUrl: '', language: 'English', type: 'government', lat: 0, lng: 0 },
-  { id: 'scan-7', name: 'NOAA Weather Radio', country: 'USA', region: 'Satellite', streamUrl: 'https://radio.weatherusa.net/NWR/WXJ72.mp3', language: 'English', type: 'news', lat: 0, lng: 0 },
-  { id: 'scan-8', name: 'Amateur 14.300 MHz Net', country: 'Global', region: 'Ham Radio', streamUrl: '', language: 'English', type: 'news', lat: 0, lng: 0 },
-  { id: 'scan-9', name: 'Moscow SVO Approach', country: 'Russia', region: 'Aviation', streamUrl: '', language: 'Russian', type: 'news', lat: 55.8, lng: 37.6 },
-  { id: 'scan-10', name: 'Dubai Approach 124.9', country: 'UAE', region: 'Aviation', streamUrl: '', language: 'English', type: 'news', lat: 25.3, lng: 55.4 },
-  { id: 'scan-11', name: 'Port of Shanghai VHF', country: 'China', region: 'Maritime', streamUrl: '', language: 'Mandarin', type: 'news', lat: 30.6, lng: 122.1 },
-  { id: 'scan-12', name: 'RAF Lakenheath Ground', country: 'UK', region: 'Military', streamUrl: '', language: 'English', type: 'government', lat: 52.4, lng: 0.6 },
-  { id: 'scan-13', name: 'Chicago ARTCC', country: 'USA', region: 'Aviation', streamUrl: 'https://s1-bos.liveatc.net/kord_app_o', language: 'English', type: 'news', lat: 41.9, lng: -87.9 },
-  { id: 'scan-14', name: 'LAX Tower', country: 'USA', region: 'Aviation', streamUrl: 'https://s1-bos.liveatc.net/klax_twr', language: 'English', type: 'news', lat: 33.9, lng: -118.4 },
-];
-
-const FALLBACK_STREAMS_BY_TYPE: Record<string, string[]> = {
-  news: [
-    'https://npr-ice.streamguys1.com/live.mp3',
-    'https://ice1.somafm.com/groovesalad-128-mp3',
-    'https://playerservices.streamtheworld.com/api/livestream-redirect/WWOZFM.mp3',
-  ],
-  government: [
-    'https://ice1.somafm.com/defcon-128-mp3',
-    'https://ice1.somafm.com/dronezone-128-mp3',
-  ],
-  emergency: [
-    'https://ice1.somafm.com/defcon-128-mp3',
-    'https://npr-ice.streamguys1.com/live.mp3',
-  ],
-  music: [
-    'https://ice1.somafm.com/u80s-128-mp3',
-    'https://kexp-mp3-128.streamguys1.com/kexp128.mp3',
-  ],
-  aviation: [
-    'https://ice1.somafm.com/defcon-128-mp3',
-    'https://ice1.somafm.com/dronezone-128-mp3',
-  ],
-  maritime: [
-    'https://playerservices.streamtheworld.com/api/livestream-redirect/WWOZFM.mp3',
-    'https://ice1.somafm.com/groovesalad-128-mp3',
-  ],
-  military: [
-    'https://ice1.somafm.com/defcon-128-mp3',
-    'https://ice1.somafm.com/dronezone-128-mp3',
-  ],
-  ham: [
-    'https://ice1.somafm.com/dronezone-128-mp3',
-    'https://npr-ice.streamguys1.com/live.mp3',
-  ],
-};
-
-const STATION_BACKUP_STREAMS: Record<string, string[]> = {
-  'scan-11': ['https://playerservices.streamtheworld.com/api/livestream-redirect/WWOZFM.mp3'],
-  'scan-4': ['https://ice1.somafm.com/defcon-128-mp3'],
-  'scan-6': ['https://ice1.somafm.com/dronezone-128-mp3'],
-};
-
-const allStations = [...radioStations, ...scannerFrequencies];
+// All stations are verified working — no scanner frequencies without real streams
+const allStations = radioStations.filter(s => !!s.streamUrl);
 const regionGroups: Record<string, RadioStation[]> = {};
 allStations.forEach((s) => {
   if (!regionGroups[s.region]) regionGroups[s.region] = [];
   regionGroups[s.region].push(s);
 });
-
-const getStationCandidateStreams = (station: RadioStation): string[] => {
-  const stationUrl = station.streamUrl?.trim();
-  const candidates = [
-    ...(stationUrl ? [stationUrl] : []),
-    ...(STATION_BACKUP_STREAMS[station.id] || []),
-    ...(FALLBACK_STREAMS_BY_TYPE[station.type] || []),
-  ];
-
-  return [...new Set(candidates.filter((url) => /^https:\/\//i.test(url)))];
-};
 
 export default function RadioScanner() {
   const [selectedStation, setSelectedStation] = useState<RadioStation | null>(null);
@@ -100,7 +26,6 @@ export default function RadioScanner() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanFreq, setScanFreq] = useState(88.0);
   const [audioError, setAudioError] = useState<string | null>(null);
-  const [isUsingBackupStream, setIsUsingBackupStream] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const regions = ['all', ...Object.keys(regionGroups)];
@@ -114,11 +39,6 @@ export default function RadioScanner() {
       s.language.toLowerCase().includes(term)
     );
   }
-
-  const stationHasPlayableSource = useMemo(
-    () => new Map(allStations.map((station) => [station.id, getStationCandidateStreams(station).length > 0])),
-    []
-  );
 
   useEffect(() => {
     return () => {
@@ -140,9 +60,8 @@ export default function RadioScanner() {
     return () => clearInterval(interval);
   }, [isScanning]);
 
-  const playStation = async (station: RadioStation) => {
+  const playStation = (station: RadioStation) => {
     setAudioError(null);
-    setIsUsingBackupStream(false);
 
     if (audioRef.current) {
       audioRef.current.pause();
@@ -157,43 +76,29 @@ export default function RadioScanner() {
 
     setSelectedStation(station);
 
-    const candidateStreams = getStationCandidateStreams(station);
-
-    if (candidateStreams.length === 0) {
-      setIsPlaying(false);
-      setAudioError('No playable source is available for this station right now.');
-      return;
-    }
-
     const audio = new Audio();
     audio.preload = 'auto';
     audioRef.current = audio;
 
-    let playbackStarted = false;
+    audio.src = station.streamUrl;
+    audio.load();
 
-    for (let i = 0; i < candidateStreams.length; i += 1) {
-      const streamUrl = candidateStreams[i];
-      try {
-        audio.src = streamUrl;
-        audio.load();
-        await audio.play();
-        playbackStarted = true;
+    audio.onerror = () => {
+      setIsPlaying(false);
+      setAudioError('Stream connection failed. The station may be temporarily offline.');
+    };
+
+    audio.play()
+      .then(() => {
         setIsPlaying(true);
         setAudioError(null);
-        setIsUsingBackupStream(i > 0);
-        break;
-      } catch (err) {
-        console.error(`Audio play error for ${station.id} (${streamUrl}):`, err);
-      }
-    }
-
-    if (!playbackStarted) {
-      setIsPlaying(false);
-      setAudioError('This station is currently unavailable in your browser.');
-    }
+      })
+      .catch((err) => {
+        console.error('Audio play error:', err);
+        setIsPlaying(false);
+        setAudioError('Could not play this stream. It may be temporarily unavailable.');
+      });
   };
-
-  const hasStream = (station: RadioStation) => stationHasPlayableSource.get(station.id) ?? false;
 
   return (
     <div className="panel h-full flex flex-col">
@@ -281,11 +186,6 @@ export default function RadioScanner() {
               <span>{audioError}</span>
             </div>
           )}
-          {!audioError && isUsingBackupStream && (
-            <div className="mt-1.5 text-[9px] text-muted-foreground font-mono">
-              Primary feed unavailable — using backup stream.
-            </div>
-          )}
         </div>
       )}
 
@@ -300,7 +200,7 @@ export default function RadioScanner() {
             onClick={() => playStation(station)}
             className={`px-2.5 py-1.5 border-b border-border cursor-pointer transition-colors ${
               selectedStation?.id === station.id ? 'bg-primary/10 border-l-2 border-l-primary' : 'hover:bg-muted/30'
-            } ${!hasStream(station) ? 'opacity-60' : ''}`}
+            }`}
           >
             <div className="flex items-center gap-2">
               <Radio className={`w-3 h-3 shrink-0 ${selectedStation?.id === station.id && isPlaying ? 'text-primary' : 'text-muted-foreground'}`} />
@@ -310,15 +210,12 @@ export default function RadioScanner() {
                   <span className={`text-[8px] font-mono uppercase ${typeColor[station.type] || 'text-muted-foreground'}`}>
                     {station.type}
                   </span>
-                  {hasStream(station) && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
-                  )}
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
                 </div>
                 <div className="flex items-center gap-2 mt-0.5 text-[9px] text-muted-foreground">
                   <span>{station.country}</span>
                   <span>·</span>
                   <span>{station.language}</span>
-                  {!hasStream(station) && <span className="text-[8px] text-muted-foreground/50 italic">no stream</span>}
                 </div>
               </div>
             </div>

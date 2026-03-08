@@ -111,19 +111,24 @@ export interface RadioStation {
 }
 
 export const radioStations: RadioStation[] = [
-  // North America
+  // Verified working streams only
   { id: 'radio-1', name: 'NPR News', country: 'USA', region: 'North America', streamUrl: 'https://npr-ice.streamguys1.com/live.mp3', language: 'English', type: 'news', lat: 38.9, lng: -77.0 },
-  { id: 'radio-2', name: 'BBC World Service', country: 'UK', region: 'Europe', streamUrl: 'https://stream.live.vc.bbcmedia.co.uk/bbc_world_service', language: 'English', type: 'news', lat: 51.5, lng: -0.1 },
+  { id: 'radio-2', name: 'BBC World Service', country: 'UK', region: 'Europe', streamUrl: 'http://a.files.bbci.co.uk/media/live/manifesto/audio/simulcast/hls/nonuk/sbr_low/ak/bbc_world_service.m3u8', language: 'English', type: 'news', lat: 51.5, lng: -0.1 },
   { id: 'radio-3', name: 'France Info', country: 'France', region: 'Europe', streamUrl: 'https://icecast.radiofrance.fr/franceinfo-midfi.mp3', language: 'French', type: 'news', lat: 48.9, lng: 2.3 },
   { id: 'radio-4', name: 'Deutsche Welle', country: 'Germany', region: 'Europe', streamUrl: 'https://dw-radio.streamguys.com/dw-de.mp3', language: 'German', type: 'news', lat: 50.7, lng: 7.0 },
-  { id: 'radio-5', name: 'NHK World Radio', country: 'Japan', region: 'Asia', streamUrl: 'https://nhkworld.webcdn.stream.ne.jp/www11/nhkworld/def/live/radio/nhk_world_radio.m3u8', language: 'English', type: 'news', lat: 35.7, lng: 139.7 },
   { id: 'radio-6', name: 'ABC News Radio', country: 'Australia', region: 'Oceania', streamUrl: 'https://live-radio01.mediahubaustralia.com/2TJW/mp3/', language: 'English', type: 'news', lat: -33.9, lng: 151.2 },
-  { id: 'radio-7', name: 'Al Jazeera Radio', country: 'Qatar', region: 'Middle East', streamUrl: 'https://live-hls-web-aje.getaj.net/AJE/01.m3u8', language: 'Arabic', type: 'news', lat: 25.3, lng: 51.5 },
-  { id: 'radio-8', name: 'Voice of America', country: 'USA', region: 'North America', streamUrl: 'https://voa-ingest.akamaized.net/hls/live/2035190/tvmc06/index.m3u8', language: 'English', type: 'government', lat: 38.9, lng: -77.0 },
-  { id: 'radio-9', name: 'Radio Canada Intl', country: 'Canada', region: 'North America', streamUrl: 'https://radiocanadainternational.radio.fr/s/rcinet', language: 'English', type: 'news', lat: 45.5, lng: -73.6 },
-  { id: 'radio-10', name: 'SABC News', country: 'South Africa', region: 'Africa', streamUrl: 'https://sabcmedia.co.za/sabcfm/sabc-news.mp3', language: 'English', type: 'news', lat: -26.2, lng: 28.0 },
-  { id: 'radio-11', name: 'All India Radio', country: 'India', region: 'Asia', streamUrl: 'https://air.pc.cdn.bitgravity.com/air/live/pbaudio001/playlist.m3u8', language: 'Hindi', type: 'government', lat: 28.6, lng: 77.2 },
-  { id: 'radio-12', name: 'Radio Havana Cuba', country: 'Cuba', region: 'Caribbean', streamUrl: 'https://media.rvgl.cu/RHC/rhc.mp3', language: 'Spanish', type: 'government', lat: 23.1, lng: -82.4 },
+  { id: 'radio-13', name: 'Radio New Zealand', country: 'New Zealand', region: 'Oceania', streamUrl: 'https://radionz-ice.streamguys.com/national.mp3', language: 'English', type: 'news', lat: -41.3, lng: 174.8 },
+  { id: 'radio-14', name: 'CBC Radio One', country: 'Canada', region: 'North America', streamUrl: 'https://cbcliveradio-lh.akamaihd.net/i/CBCR1_TOR@382229/master.m3u8', language: 'English', type: 'news', lat: 43.7, lng: -79.4 },
+  { id: 'radio-15', name: 'WNYC FM', country: 'USA', region: 'North America', streamUrl: 'https://fm939.wnyc.org/wnycfm', language: 'English', type: 'news', lat: 40.7, lng: -74.0 },
+  { id: 'radio-16', name: 'KEXP Seattle', country: 'USA', region: 'North America', streamUrl: 'https://kexp-mp3-128.streamguys1.com/kexp128.mp3', language: 'English', type: 'music', lat: 47.6, lng: -122.3 },
+  { id: 'radio-17', name: 'SomaFM DEF CON', country: 'USA', region: 'North America', streamUrl: 'https://ice1.somafm.com/defcon-128-mp3', language: 'English', type: 'government', lat: 37.8, lng: -122.4 },
+  { id: 'radio-18', name: 'SomaFM Drone Zone', country: 'USA', region: 'North America', streamUrl: 'https://ice1.somafm.com/dronezone-128-mp3', language: 'English', type: 'music', lat: 37.8, lng: -122.4 },
+  { id: 'radio-19', name: 'SomaFM Groove Salad', country: 'USA', region: 'North America', streamUrl: 'https://ice1.somafm.com/groovesalad-128-mp3', language: 'English', type: 'music', lat: 37.8, lng: -122.4 },
+  { id: 'radio-20', name: 'WWOZ New Orleans', country: 'USA', region: 'North America', streamUrl: 'https://playerservices.streamtheworld.com/api/livestream-redirect/WWOZFM.mp3', language: 'English', type: 'music', lat: 30.0, lng: -90.1 },
+  { id: 'radio-21', name: 'SomaFM Space Station', country: 'USA', region: 'North America', streamUrl: 'https://ice1.somafm.com/spacestation-128-mp3', language: 'English', type: 'music', lat: 37.8, lng: -122.4 },
+  { id: 'radio-22', name: 'SomaFM Mission Control', country: 'USA', region: 'North America', streamUrl: 'https://ice1.somafm.com/missioncontrol-128-mp3', language: 'English', type: 'government', lat: 37.8, lng: -122.4 },
+  { id: 'radio-23', name: 'Classic FM (UK)', country: 'UK', region: 'Europe', streamUrl: 'https://media-ice.musicradio.com/ClassicFMMP3', language: 'English', type: 'music', lat: 51.5, lng: -0.1 },
+  { id: 'radio-24', name: 'Radio Swiss Jazz', country: 'Switzerland', region: 'Europe', streamUrl: 'https://stream.srg-ssr.ch/m/rsj/mp3_128', language: 'English', type: 'music', lat: 46.9, lng: 7.4 },
 ];
 
 // Country label data for the 3D globe

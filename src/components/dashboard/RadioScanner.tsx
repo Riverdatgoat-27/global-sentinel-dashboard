@@ -100,6 +100,7 @@ export default function RadioScanner() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanFreq, setScanFreq] = useState(88.0);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [isUsingBackupStream, setIsUsingBackupStream] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const regions = ['all', ...Object.keys(regionGroups)];
@@ -113,6 +114,11 @@ export default function RadioScanner() {
       s.language.toLowerCase().includes(term)
     );
   }
+
+  const stationHasPlayableSource = useMemo(
+    () => new Map(allStations.map((station) => [station.id, getStationCandidateStreams(station).length > 0])),
+    []
+  );
 
   useEffect(() => {
     return () => {
@@ -134,16 +140,15 @@ export default function RadioScanner() {
     return () => clearInterval(interval);
   }, [isScanning]);
 
-  const playStation = (station: RadioStation) => {
+  const playStation = async (station: RadioStation) => {
     setAudioError(null);
+    setIsUsingBackupStream(false);
 
-    // Stop current audio
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
 
-    // Toggle off if same station
     if (selectedStation?.id === station.id && isPlaying) {
       setIsPlaying(false);
       setSelectedStation(null);
@@ -152,37 +157,44 @@ export default function RadioScanner() {
 
     setSelectedStation(station);
 
-    if (!station.streamUrl) {
+    const candidateStreams = getStationCandidateStreams(station);
+
+    if (candidateStreams.length === 0) {
       setIsPlaying(false);
-      setAudioError('This frequency is metadata-only. No live stream available for this channel.');
+      setAudioError('No playable source is available for this station right now.');
       return;
     }
 
-    // Create Audio element immediately in user gesture context
-    const audio = new Audio(station.streamUrl);
+    const audio = new Audio();
     audio.preload = 'auto';
-    // Do NOT set crossOrigin - radio streams typically don't support CORS
-    // and setting it causes them to fail
+    audio.playsInline = true;
     audioRef.current = audio;
 
-    audio.onerror = () => {
-      setIsPlaying(false);
-      setAudioError('Stream connection failed. The station may be offline.');
-    };
+    let playbackStarted = false;
 
-    audio.play()
-      .then(() => {
+    for (let i = 0; i < candidateStreams.length; i += 1) {
+      const streamUrl = candidateStreams[i];
+      try {
+        audio.src = streamUrl;
+        audio.load();
+        await audio.play();
+        playbackStarted = true;
         setIsPlaying(true);
         setAudioError(null);
-      })
-      .catch((err) => {
-        console.error('Audio play error:', err);
-        setIsPlaying(false);
-        setAudioError('Stream may be unavailable. Some streams require direct access.');
-      });
+        setIsUsingBackupStream(i > 0);
+        break;
+      } catch (err) {
+        console.error(`Audio play error for ${station.id} (${streamUrl}):`, err);
+      }
+    }
+
+    if (!playbackStarted) {
+      setIsPlaying(false);
+      setAudioError('This station is currently unavailable in your browser.');
+    }
   };
 
-  const hasStream = (station: RadioStation) => !!station.streamUrl;
+  const hasStream = (station: RadioStation) => stationHasPlayableSource.get(station.id) ?? false;
 
   return (
     <div className="panel h-full flex flex-col">

@@ -2,17 +2,13 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, MapPin, X, Maximize2, Minimize2, ExternalLink } from 'lucide-react';
 
-// Real public camera YouTube live streams embeddable
-const liveCameras = [
-  { id: 'cam-1', name: 'Times Square NYC', location: 'New York, USA', embedId: 'AdUw5RdyZxI', type: 'city' as const },
-  { id: 'cam-2', name: 'Jackson Hole', location: 'Wyoming, USA', embedId: 'DoGXOP1FMbE', type: 'city' as const },
-  { id: 'cam-3', name: 'Venice Beach', location: 'Los Angeles, USA', embedId: 'ZIvLTIBbpLQ', type: 'city' as const },
-  { id: 'cam-4', name: 'Miami Beach', location: 'Florida, USA', embedId: '2DC9xXSIDhI', type: 'city' as const },
-  { id: 'cam-5', name: 'Dublin City', location: 'Dublin, Ireland', embedId: 'Y87VCkoqNKU', type: 'city' as const },
-  { id: 'cam-6', name: 'ISS Earth View', location: 'Low Earth Orbit', embedId: 'xRPTBhmcyXY', type: 'weather' as const },
-  { id: 'cam-7', name: 'Tokyo Skyline', location: 'Tokyo, Japan', embedId: 'DjYZk8nrXVY', type: 'city' as const },
-  { id: 'cam-8', name: 'Port of LA', location: 'Los Angeles, USA', embedId: '1NdFfMLRGNw', type: 'port' as const },
-];
+import { cctvCameras } from '@/data/mockData';
+
+// Use the real camera data from mockData which now has YouTube embed IDs in the url field
+const liveCameras = cctvCameras.map(cam => ({
+  ...cam,
+  embedId: cam.url, // url field now stores YouTube embed IDs
+}));
 
 export default function CCTVPanel() {
   const [selectedCam, setSelectedCam] = useState<string | null>(null);

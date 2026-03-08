@@ -15,11 +15,14 @@ import AssetDetailPanel, { type SelectedAsset } from '@/components/dashboard/Ass
 import NexusAI, { type CortanaAction } from '@/components/dashboard/NexusAI';
 import LiveInfoTicker from '@/components/dashboard/LiveInfoTicker';
 import CCTVViewer from '@/components/dashboard/CCTVViewer';
+import WarPanel from '@/components/dashboard/WarPanel';
+import NewsFeedPanel from '@/components/dashboard/NewsFeedPanel';
 import IntelGlobe, { type GlobeControlHandle } from '@/components/globe/IntelGlobe';
 import { useEarthquakeData } from '@/hooks/useEarthquakeData';
 import { useAircraftData } from '@/hooks/useAircraftData';
 import { useSimulatedData } from '@/hooks/useSimulatedData';
 import { useGDELTData } from '@/hooks/useGDELTData';
+import { useRealTimeNews } from '@/hooks/useRealTimeNews';
 import { infrastructurePoints, cctvCameras } from '@/data/mockData';
 import type { LayerVisibility, CCTVCamera } from '@/types/intelligence';
 
